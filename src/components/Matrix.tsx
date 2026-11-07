@@ -1,4 +1,5 @@
 import {
+  dayOfMonth,
   daysInYear,
   matrixLayout,
   matrixMonthLabels,
@@ -14,6 +15,8 @@ export function Matrix(props: {
   today: { y: number; idx: number };
   color: string;
   isMarked: (idx: number) => boolean;
+  selectedDate?: { y: number; m: number; d: number };
+  onSelectDate?: (y: number, m: number, d: number) => void;
   onSelectMonth?: (m: number) => void;
 }) {
   const L = matrixLayout(props.year, props.weekStart, props.skipWeekends);
@@ -29,12 +32,19 @@ export function Matrix(props: {
     const sameYear = props.year === props.today.y;
     const future =
       props.year > props.today.y || (sameYear && idx > props.today.idx);
+    const m = monthOfYear(props.year, idx);
+    const d = dayOfMonth(props.year, idx);
+    const isSelected =
+      props.selectedDate &&
+      props.selectedDate.y === props.year &&
+      props.selectedDate.m === m &&
+      props.selectedDate.d === d;
     const cls =
       "mx-cell" +
       (future ? " f" : "") +
       (props.isMarked(idx) ? " mk" : "") +
-      (sameYear && props.today.idx === idx ? " t" : "");
-    const m = monthOfYear(props.year, idx);
+      (sameYear && props.today.idx === idx ? " t" : "") +
+      (isSelected ? " sel" : "");
     cells.push(
       <button
         key={idx}
@@ -45,8 +55,11 @@ export function Matrix(props: {
           gridRow: row + 1,
           ...(props.isMarked(idx) ? { background: props.color } : null),
         }}
-        aria-label={`Jump to ${monthNamesS[m]}`}
-        onClick={() => props.onSelectMonth?.(m)}
+        aria-label={`${monthNamesS[m]} ${d}, ${props.year}`}
+        onClick={() => {
+          props.onSelectDate?.(props.year, m, d);
+          props.onSelectMonth?.(m);
+        }}
       />,
     );
   }

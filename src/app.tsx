@@ -1,3 +1,4 @@
+import { useState } from "preact/hooks";
 import { PALETTE } from "./state/palette";
 import { todayRef } from "./state/dates";
 import { Header } from "./components/Header";
@@ -6,6 +7,7 @@ import { YearSelect } from "./components/YearSelect";
 import { Matrix } from "./components/Matrix";
 import { MonthTabs } from "./components/MonthTabs";
 import { MonthGrid } from "./components/MonthGrid";
+import { Notes } from "./components/Notes";
 import { SettingsSheet } from "./components/SettingsSheet";
 import { EditSheet } from "./components/EditSheet";
 import { Toast } from "./components/Toast";
@@ -14,6 +16,11 @@ import { useStore } from "./state/store";
 export function App() {
   const ui = useStore();
   const today = todayRef();
+  const [selectedDate, setSelectedDate] = useState(() => ({
+    y: today.y,
+    m: today.m,
+    d: today.d,
+  }));
   const group = ui.groups[ui.sel];
   const hex = group ? PALETTE[group.color] : "var(--cell)";
   const isMarked = (y: number, idx: number) =>
@@ -35,11 +42,21 @@ export function App() {
             onEdit={() => ui.setSheet("groups")}
             onNew={() => ui.setSheet("groups")}
           />
-          <YearSelect
-            year={ui.year}
-            onSet={ui.setYear}
-            onToday={ui.jumpToday}
-          />
+          <div class="row1-right">
+            <button
+              type="button"
+              class="today-btn"
+              onClick={() => {
+                ui.jumpToday();
+                const t = todayRef();
+                setSelectedDate({ y: t.y, m: t.m, d: t.d });
+              }}
+              aria-label="Jump to today"
+            >
+              Today
+            </button>
+            <YearSelect year={ui.year} onSet={ui.setYear} />
+          </div>
         </section>
 
         <Matrix
@@ -49,6 +66,8 @@ export function App() {
           today={today}
           color={hex}
           isMarked={(idx) => isMarked(ui.year, idx)}
+          selectedDate={selectedDate}
+          onSelectDate={(y, m, d) => setSelectedDate({ y, m, d })}
           onSelectMonth={ui.setMonth}
         />
 
@@ -64,11 +83,19 @@ export function App() {
           color={hex}
           today={today}
           isMarked={isMarked}
+          selectedDate={selectedDate}
+          onSelectDate={(y, m, d) => setSelectedDate({ y, m, d })}
           onToggle={(y, idx) => ui.toggle(ui.sel, y, idx)}
           onSetMark={(y, idx, val, push) =>
             ui.setMark(ui.sel, y, idx, val, push)
           }
           onCommitMarks={ui.commitMarks}
+        />
+
+        <Notes
+          year={selectedDate.y}
+          month={selectedDate.m}
+          day={selectedDate.d}
         />
       </main>
 

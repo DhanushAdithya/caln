@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef } from "preact/hooks";
-import { dayOfMonth, monthGrid } from "../state/dates";
+import {
+  dayOfMonth,
+  daysInMonth,
+  isWeekend,
+  monthGrid,
+  ymdToIdx,
+} from "../state/dates";
 import { monthTitle, weekdayLong, weekdayShort } from "../ui/i18n";
 import { onColor } from "../state/palette";
 import type { WeekStart } from "../state/dates";
@@ -14,6 +20,8 @@ export function MonthGrid(props: {
   color: string;
   today: { y: number; idx: number };
   isMarked: (y: number, idx: number) => boolean;
+  selectedDate?: { y: number; m: number; d: number };
+  onSelectDate?: (y: number, m: number, d: number) => void;
   onToggle: (y: number, idx: number) => void;
   onSetMark?: (
     y: number,
@@ -57,6 +65,22 @@ export function MonthGrid(props: {
   const long = useMemo(() => weekdayLong(), []);
   const on = onColor(props.color);
 
+  const stats = useMemo(() => {
+    const totalDays = daysInMonth(props.year, props.month);
+    let total = 0;
+    let selected = 0;
+    for (let d = 1; d <= totalDays; d++) {
+      const idx = ymdToIdx(props.year, props.month, d);
+      if (props.skipWeekends && isWeekend(props.year, idx)) continue;
+      total++;
+      if (props.isMarked(props.year, idx)) {
+        selected++;
+      }
+    }
+    const pct = total > 0 ? Math.round((selected / total) * 100) : 0;
+    return { selected, total, pct };
+  }, [props.year, props.month, props.skipWeekends, props.isMarked]);
+
   const onKeyDown = (e: KeyboardEvent, i: number) => {
     let next: number | null = null;
     if (e.key === "ArrowLeft") next = i > 0 ? i - 1 : null;
@@ -78,6 +102,12 @@ export function MonthGrid(props: {
     <section class="mg-sec" aria-label={monthTitle(props.year, props.month)}>
       <div class="mg-head">
         <h2 class="mg-title">{monthTitle(props.year, props.month)}</h2>
+        <span class="mg-stat">
+          <span class="mg-stat-pct">{stats.pct}%</span>
+          <span class="mg-stat-count">
+            ({stats.selected}/{stats.total})
+          </span>
+        </span>
       </div>
       <div
         ref={gridRef}
@@ -100,12 +130,18 @@ export function MonthGrid(props: {
             props.highlightToday &&
             c.ref.y === props.today.y &&
             c.ref.idx === props.today.idx;
+          const isSelected =
+            props.selectedDate &&
+            props.selectedDate.y === c.ref.y &&
+            props.selectedDate.m === c.m &&
+            props.selectedDate.d === d;
           const cls =
             "mg-d" +
             (c.inMonth ? "" : " out") +
             (props.weekendsRed && weekend ? " wk" : "") +
             (marked ? " mk" : "") +
-            (today ? " t" : "");
+            (today ? " t" : "") +
+            (isSelected ? " sel" : "");
           return (
             <button
               key={c.slot}
@@ -149,6 +185,7 @@ export function MonthGrid(props: {
                   e.preventDefault();
                   return;
                 }
+                props.onSelectDate?.(c.ref.y, c.m, d);
                 props.onToggle(c.ref.y, c.ref.idx);
               }}
               onKeyDown={(e) => onKeyDown(e, i)}
