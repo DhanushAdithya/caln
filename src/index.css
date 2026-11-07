@@ -74,7 +74,6 @@ button:focus-visible,
   padding: 6px 16px 48px;
 }
 
-/* header — single row, sticky, hairline */
 .hdr {
   position: sticky;
   top: 0;
@@ -107,7 +106,6 @@ button:focus-visible,
   background: var(--hover);
 }
 
-/* section 1 — dropdown row */
 .row1 {
   display: flex;
   align-items: center;
@@ -116,7 +114,6 @@ button:focus-visible,
   padding-block: 12px 6px;
 }
 
-/* dropdowns */
 .dd {
   position: relative;
 }
@@ -210,8 +207,6 @@ button:focus-visible,
   font-variant-numeric: tabular-nums;
 }
 
-/* bleed + scroll: desktop = capped by the centered 720px frame, no scrollbar;
-   mobile = scroller extends to the viewport edges (-16px eats the wrap gutters) */
 .scroll-x {
   overflow-x: auto;
   overflow-y: hidden;
@@ -223,7 +218,6 @@ button:focus-visible,
   display: none;
 }
 
-/* section 2 — contribution matrix */
 .mx {
   --mx: 11px;
   display: grid;
@@ -261,7 +255,6 @@ button:focus-visible,
   color: var(--muted);
 }
 
-/* section 3 — month tabs */
 .tabs {
   display: flex;
   gap: 6px;
@@ -290,7 +283,6 @@ button:focus-visible,
   color: var(--bg);
 }
 
-/* section 4 — month calendar */
 .mg-sec {
   margin-top: 14px;
 }
@@ -344,7 +336,6 @@ button:focus-visible,
   color: #fff;
 }
 
-/* settings sheet */
 .ovl {
   position: fixed;
   inset: 0;
@@ -389,7 +380,6 @@ button:focus-visible,
   border-bottom: 0;
 }
 
-/* segmented control */
 .seg {
   display: flex;
   gap: 2px;
@@ -409,7 +399,6 @@ button:focus-visible,
   color: var(--bg);
 }
 
-/* switch */
 .switch {
   position: relative;
   width: 42px;
@@ -442,8 +431,6 @@ button:focus-visible,
   .mg-d {
     font-size: 13.5px;
   }
-  /* 10px cells → even 54-column leap years (719px) fit the 720px frame:
-       desktop never scrolls */
   .mx {
     --mx: 10px;
   }

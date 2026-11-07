@@ -1,6 +1,5 @@
 import { monthNames } from "../ui/i18n";
 
-/** Section 3 — Jan…Dec as radio-acting buttons. Scrollable mobile, bleeding desktop. */
 export function MonthTabs(props: {
   month: number;
   onSet: (m: number) => void;

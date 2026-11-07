@@ -1,4 +1,4 @@
-import type { Settings, ThemeName } from "../ui/mockState";
+import type { Settings, ThemeName } from "../state/settings";
 
 function Switch(props: {
   checked: boolean;

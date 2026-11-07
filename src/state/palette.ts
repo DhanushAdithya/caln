@@ -1,4 +1,3 @@
-/** Fixed 12-swatch palette (plan §3). Indices are stored, never hex strings. */
 export const PALETTE = [
   "#ef4444",
   "#f97316",

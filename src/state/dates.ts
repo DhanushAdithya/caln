@@ -1,8 +1,4 @@
-// Zero-dependency calendar math.
-// All layout math is "slot"-based: a slot is an index on an infinite week grid
-// aligned to the user's week start. weekday ids use the JS convention 0 = Sun … 6 = Sat.
-
-export type WeekStart = 0 | 1; // 0 = Sunday first, 1 = Monday first
+export type WeekStart = 0 | 1;
 
 const MS_DAY = 86_400_000;
 const MLEN = [31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const;
@@ -10,15 +6,16 @@ const MLEN = [31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const;
 export function isLeap(y: number): boolean {
   return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
 }
+
 export function daysInYear(y: number): number {
   return isLeap(y) ? 366 : 365;
 }
+
 export function daysInMonth(y: number, m: number): number {
   if (m === 1) return isLeap(y) ? 29 : 28;
   return MLEN[m];
 }
 
-/** Day-index (0-based within the year) of each month's first day. */
 export function monthStarts(y: number): number[] {
   const s: number[] = [];
   let a = 0;
@@ -28,27 +25,31 @@ export function monthStarts(y: number): number[] {
   }
   return s;
 }
+
 export function ymdToIdx(y: number, m: number, d: number): number {
   return monthStarts(y)[m] + d - 1;
 }
+
 export function monthOfYear(y: number, idx: number): number {
   const s = monthStarts(y);
   let m = 11;
   while (m > 0 && idx < s[m]) m--;
   return m;
 }
+
 export function dayOfMonth(y: number, idx: number): number {
   const s = monthStarts(y);
   return idx - s[monthOfYear(y, idx)] + 1;
 }
 
-/** Weekday of Jan 1 (0 = Sun). UTC math keeps it DST-safe; valid for years ≥ 100. */
 export function jan1Weekday(y: number): number {
   return ((Math.round(Date.UTC(y, 0, 1) / MS_DAY) % 7) + 11) % 7;
 }
+
 export function weekdayOf(y: number, idx: number): number {
   return (jan1Weekday(y) + idx) % 7;
 }
+
 export function isWeekend(y: number, idx: number): boolean {
   const wd = weekdayOf(y, idx);
   return wd === 0 || wd === 6;
@@ -64,12 +65,10 @@ export function todayRef(): { y: number; m: number; d: number; idx: number } {
   };
 }
 
-/** Where Jan 1 sits inside its week column for the given week start. */
 export function jan1Offset(y: number, weekStart: WeekStart): number {
   return (jan1Weekday(y) - weekStart + 7) % 7;
 }
 
-/** Visible weekday ids, top→bottom (weekend rows dropped when skipWeekends). */
 export function visibleWeekOrder(
   weekStart: WeekStart,
   skipWeekends: boolean,
@@ -83,18 +82,10 @@ export function visibleWeekOrder(
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// Section 2: year contribution matrix
-// ---------------------------------------------------------------------------
-
 export interface MatrixLayout {
-  /** number of week columns */
   colCount: number;
-  /** visible weekday ids, top→bottom */
   rows: number[];
-  /** 1-based grid row among visible rows; 0 if hidden */
   rowOf(wd: number): number;
-  /** 1-based week column of a day index */
   colOf(idx: number): number;
 }
 
@@ -109,12 +100,11 @@ export function matrixLayout(
   return {
     colCount,
     rows,
-    rowOf: (wd) => rows.indexOf(wd) + 1, // 0 ↔ hidden
+    rowOf: (wd) => rows.indexOf(wd) + 1,
     colOf: (idx) => Math.floor((idx + o) / 7) + 1,
   };
 }
 
-/** Month name anchors for the matrix top row (GitHub-style, 0-based week col). */
 export function matrixMonthLabels(
   y: number,
   weekStart: WeekStart,
@@ -126,7 +116,7 @@ export function matrixMonthLabels(
   for (let m = 0; m < 12; m++) {
     const inCol = (starts[m] + o) % 7;
     let col = Math.floor((starts[m] + o) / 7);
-    if (inCol > 3) col--; // 1st sits late in its column → anchor one left
+    if (inCol > 3) col--;
     col = Math.max(0, col);
     if (col > prev) {
       out.push({ m, col });
@@ -136,33 +126,20 @@ export function matrixMonthLabels(
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// Section 4: month grid
-// ---------------------------------------------------------------------------
-
 export interface GridCell {
-  /** absolute slot index on the week grid */
   slot: number;
-  /** weekday id of the slot's column */
   wd: number;
-  /** visible column position (0-based) */
   col: number;
-  /** resolved day (adjacent-month dates included) */
   ref: { y: number; idx: number };
   inMonth: boolean;
   m: number;
 }
+
 export interface MonthGridSpec {
-  /** 7 normally, 5 with weekends hidden */
   cols: number;
   cells: GridCell[];
 }
 
-/**
- * Rows containing at least one in-month day; adjacent-month days fill the rest.
- * Fully-hidden rows (e.g. the only day-1 is a hidden weekend) are dropped, so
- * there are never phantom all-blank rows/columns.
- */
 export function monthGrid(
   y: number,
   m: number,

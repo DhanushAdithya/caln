@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 
-/** Minimal dropdown: outside-click + Escape dismissal, no deps. */
 export function Dropdown(props: {
   label: ComponentChildren;
   align?: "left" | "right";

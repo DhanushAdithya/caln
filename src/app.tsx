@@ -7,10 +7,10 @@ import { Matrix } from "./components/Matrix";
 import { MonthTabs } from "./components/MonthTabs";
 import { MonthGrid } from "./components/MonthGrid";
 import { SettingsSheet } from "./components/SettingsSheet";
-import { useMockState } from "./ui/mockState";
+import { useStore } from "./state/store";
 
 export function App() {
-  const ui = useMockState();
+  const ui = useStore();
   const today = todayRef();
   const group = ui.groups[ui.sel] ?? ui.groups[0];
   const hex = PALETTE[group.color];

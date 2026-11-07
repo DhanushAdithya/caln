@@ -1,9 +1,9 @@
 import { Dropdown } from "./Menu";
 import { PALETTE } from "../state/palette";
-import type { MockGroup } from "../ui/mockState";
+import type { Group } from "../state/hash";
 
 export function GroupSelect(props: {
-  groups: MockGroup[];
+  groups: Group[];
   sel: number;
   onSelect: (i: number) => void;
 }) {

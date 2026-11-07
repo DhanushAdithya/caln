@@ -4,7 +4,6 @@ import { monthTitle, weekdayLong, weekdayShort } from "../ui/i18n";
 import { onColor } from "../state/palette";
 import type { WeekStart } from "../state/dates";
 
-/** Section 4 — the month calendar. Tap toggles membership in the active group. */
 export function MonthGrid(props: {
   year: number;
   month: number;

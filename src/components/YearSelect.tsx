@@ -1,6 +1,6 @@
 import { Dropdown } from "./Menu";
 
-const SPAN = 10; // plan: current year ±10
+const SPAN = 10;
 
 export function YearSelect(props: {
   year: number;

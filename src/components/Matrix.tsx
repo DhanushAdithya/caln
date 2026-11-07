@@ -6,7 +6,6 @@ import {
 } from "../state/dates";
 import { weekdayNarrow, monthNames } from "../ui/i18n";
 
-/** Section 2 — year contribution matrix (display-only). */
 export function Matrix(props: {
   year: number;
   weekStart: 0 | 1;
@@ -24,7 +23,7 @@ export function Matrix(props: {
   const cells: preact.JSX.Element[] = [];
   for (let idx = 0; idx < total; idx++) {
     const row = L.rowOf(weekdayOf(props.year, idx));
-    if (row === 0) continue; // hidden weekend row
+    if (row === 0) continue;
     const sameYear = props.year === props.today.y;
     const future =
       props.year > props.today.y || (sameYear && idx > props.today.idx);
@@ -38,8 +37,8 @@ export function Matrix(props: {
         key={idx}
         class={cls}
         style={{
-          gridColumn: L.colOf(idx) + 1, // +1: weekday-label column
-          gridRow: row + 1, // +1: month-label row
+          gridColumn: L.colOf(idx) + 1,
+          gridRow: row + 1,
           ...(props.isMarked(idx) ? { background: props.color } : null),
         }}
       />,

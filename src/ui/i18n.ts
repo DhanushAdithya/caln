@@ -1,5 +1,3 @@
-// Device-locale display names (plan: month/day names from Intl, chrome in English).
-
 const cache = new Map<string, string[]>();
 
 function monthNamesOf(style: "short" | "long"): string[] {
@@ -28,7 +26,6 @@ function weekdayNamesOf(style: "short" | "narrow" | "long"): string[] {
 }
 
 export const monthNames = (): string[] => monthNamesOf("short");
-export const monthNamesLong = (): string[] => monthNamesOf("long");
 export const weekdayShort = (): string[] => weekdayNamesOf("short");
 export const weekdayNarrow = (): string[] => weekdayNamesOf("narrow");
 export const weekdayLong = (): string[] => weekdayNamesOf("long");
