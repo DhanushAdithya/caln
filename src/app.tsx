@@ -7,21 +7,31 @@ import { Matrix } from "./components/Matrix";
 import { MonthTabs } from "./components/MonthTabs";
 import { MonthGrid } from "./components/MonthGrid";
 import { SettingsSheet } from "./components/SettingsSheet";
+import { EditSheet } from "./components/EditSheet";
+import { Toast } from "./components/Toast";
 import { useStore } from "./state/store";
 
 export function App() {
   const ui = useStore();
   const today = todayRef();
-  const group = ui.groups[ui.sel] ?? ui.groups[0];
-  const hex = PALETTE[group.color];
-  const isMarked = (y: number, idx: number) => ui.hasMark(ui.sel, y, idx);
+  const group = ui.groups[ui.sel];
+  const hex = group ? PALETTE[group.color] : "var(--cell)";
+  const isMarked = (y: number, idx: number) =>
+    group ? ui.hasMark(ui.sel, y, idx) : false;
 
   return (
     <>
       <Header onGear={() => ui.setSheet(ui.sheet ? null : "settings")} />
       <main class="wrap">
         <section class="row1">
-          <GroupSelect groups={ui.groups} sel={ui.sel} onSelect={ui.setSel} />
+          <GroupSelect
+            groups={ui.groups}
+            sel={ui.sel}
+            onSelect={ui.setSel}
+            onDelete={ui.deleteGroup}
+            onEdit={() => ui.setSheet("groups")}
+            onNew={() => ui.setSheet("groups")}
+          />
           <YearSelect
             year={ui.year}
             onSet={ui.setYear}
@@ -60,6 +70,19 @@ export function App() {
         onSet={ui.setSetting}
         onClose={() => ui.setSheet(null)}
       />
+
+      <EditSheet
+        open={ui.sheet === "groups"}
+        groups={ui.groups}
+        activeId={group ? group.id : null}
+        onClose={() => ui.setSheet(null)}
+        onCreate={(name, color) => ui.createGroup(name, color)}
+        onUpdate={ui.updateGroup}
+        onDelete={ui.deleteGroup}
+        onReorder={ui.reorderGroup}
+      />
+
+      <Toast toast={ui.toast} onDismiss={ui.dismissToast} />
     </>
   );
 }

@@ -19,7 +19,15 @@ import { todayRef } from "./dates";
 
 export type Sheet = null | "settings" | "groups";
 
-interface StoreView {
+export interface ToastData {
+  message: string;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+}
+
+export interface StoreView {
   groups: Group[];
   sel: number;
   setSel: (i: number) => void;
@@ -34,17 +42,32 @@ interface StoreView {
   sheet: Sheet;
   setSheet: (s: Sheet) => void;
   jumpToday: () => void;
+  createGroup: (name: string, color?: number) => number;
+  updateGroup: (id: number, patch: { name?: string; color?: number }) => void;
+  deleteGroup: (id: number) => void;
+  undoDelete: () => void;
+  reorderGroup: (fromIndex: number, toIndex: number) => void;
+  toast: ToastData | null;
+  dismissToast: () => void;
+  showToast: (
+    msg: string,
+    action?: { label: string; onClick: () => void },
+    durationMs?: number,
+  ) => void;
 }
 
 function createDefaultState(): State {
   const today = todayRef();
   return {
     v: 1,
-    nextGroupId: 4,
+    nextGroupId: 2,
     groups: [
-      { id: 1, name: "Work", color: 5, years: {} },
-      { id: 2, name: "Gym", color: 4, years: {} },
-      { id: 3, name: "Vacation", color: 1, years: {} },
+      {
+        id: 1,
+        name: "Group 1",
+        color: 5,
+        years: {},
+      },
     ],
     active: 1,
     year: today.y,
@@ -55,6 +78,9 @@ function createDefaultState(): State {
 let state: State = createDefaultState();
 let settings: Settings = { ...DEFAULT_SETTINGS };
 let currentSheet: Sheet = null;
+let currentToast: ToastData | null = null;
+let toastTimer: number | null = null;
+let deletedGroupBackup: { group: Group; index: number } | null = null;
 
 const listeners = new Set<() => void>();
 
@@ -150,6 +176,14 @@ if (typeof window !== "undefined") {
     if (hash === lastWrittenHash) return;
     const decoded = await decodeHash(hash);
     if (decoded) {
+      if (
+        decoded.groups.some(
+          (g) =>
+            g.name === "Work" || g.name === "Gym" || g.name === "Vacation",
+        )
+      ) {
+        return;
+      }
       lastWrittenHash = hash;
       state = decoded;
       notify();
@@ -186,7 +220,13 @@ export function initStore(): Promise<void> {
       }
     }
 
-    if (!loadedState) {
+    const hasOldDefaults =
+      loadedState &&
+      loadedState.groups.some(
+        (g) => g.name === "Work" || g.name === "Gym" || g.name === "Vacation",
+      );
+
+    if (!loadedState || hasOldDefaults) {
       loadedState = createDefaultState();
       if (typeof window !== "undefined") {
         const h = await encodeHash(loadedState);
@@ -204,6 +244,34 @@ export function initStore(): Promise<void> {
 
 if (typeof window !== "undefined") {
   initStore();
+}
+
+function showToast(
+  msg: string,
+  action?: { label: string; onClick: () => void },
+  durationMs = 3000,
+): void {
+  if (typeof window === "undefined") return;
+  if (toastTimer !== null) {
+    window.clearTimeout(toastTimer);
+  }
+  currentToast = { message: msg, action };
+  notify();
+  toastTimer = window.setTimeout(() => {
+    currentToast = null;
+    toastTimer = null;
+    notify();
+  }, durationMs);
+}
+
+function dismissToast(): void {
+  if (typeof window === "undefined") return;
+  if (toastTimer !== null) {
+    window.clearTimeout(toastTimer);
+    toastTimer = null;
+  }
+  currentToast = null;
+  notify();
 }
 
 function setSel(index: number): void {
@@ -237,7 +305,13 @@ function jumpToday(): void {
 
 function toggleMark(groupIndex: number, year: number, dayIdx: number): void {
   const group = state.groups[groupIndex];
-  if (!group) return;
+  if (!group) {
+    showToast("Create a group first", {
+      label: "+ New",
+      onClick: () => setSheet("groups"),
+    });
+    return;
+  }
 
   const currentYearMarks = group.years[year];
   const nextMarks = currentYearMarks
@@ -258,6 +332,103 @@ function toggleMark(groupIndex: number, year: number, dayIdx: number): void {
     i === groupIndex ? { ...g, years: nextYears } : g,
   );
 
+  updateState({ ...state, groups: nextGroups }, { pushHash: true });
+}
+
+function createGroup(name: string, color?: number): number {
+  const id = state.nextGroupId++;
+  const assignedColor = color ?? (id - 1) % 12;
+  const newGroup: Group = {
+    id,
+    name: name.trim() || `Group ${id}`,
+    color: assignedColor,
+    years: {},
+  };
+  const nextGroups = [...state.groups, newGroup];
+  updateState(
+    {
+      ...state,
+      nextGroupId: state.nextGroupId,
+      groups: nextGroups,
+      active: id,
+    },
+    { pushHash: true },
+  );
+  return id;
+}
+
+function updateGroup(
+  id: number,
+  patch: { name?: string; color?: number },
+): void {
+  const nextGroups = state.groups.map((g) => {
+    if (g.id !== id) return g;
+    return {
+      ...g,
+      name: patch.name !== undefined ? patch.name.trim() || g.name : g.name,
+      color: patch.color !== undefined ? patch.color : g.color,
+    };
+  });
+  updateState({ ...state, groups: nextGroups }, { pushHash: true });
+}
+
+function deleteGroup(id: number): void {
+  const index = state.groups.findIndex((g) => g.id === id);
+  if (index === -1) return;
+  const targetGroup = state.groups[index];
+  deletedGroupBackup = { group: targetGroup, index };
+
+  const nextGroups = state.groups.filter((g) => g.id !== id);
+  let nextActive = state.active;
+  if (state.active === id) {
+    const nextGroup = nextGroups[index] ?? nextGroups[nextGroups.length - 1];
+    nextActive = nextGroup ? nextGroup.id : null;
+  }
+
+  updateState(
+    { ...state, groups: nextGroups, active: nextActive },
+    { pushHash: true },
+  );
+
+  showToast(
+    `Deleted "${targetGroup.name}"`,
+    {
+      label: "Undo",
+      onClick: () => undoDelete(),
+    },
+    3000,
+  );
+}
+
+function undoDelete(): void {
+  if (!deletedGroupBackup) return;
+  const { group, index } = deletedGroupBackup;
+  deletedGroupBackup = null;
+
+  const nextGroups = [...state.groups];
+  const insertAt = Math.min(index, nextGroups.length);
+  nextGroups.splice(insertAt, 0, group);
+
+  updateState(
+    { ...state, groups: nextGroups, active: group.id },
+    { pushHash: true },
+  );
+  dismissToast();
+}
+
+function reorderGroup(fromIndex: number, toIndex: number): void {
+  if (
+    fromIndex < 0 ||
+    fromIndex >= state.groups.length ||
+    toIndex < 0 ||
+    toIndex >= state.groups.length ||
+    fromIndex === toIndex
+  ) {
+    return;
+  }
+  const nextGroups = [...state.groups];
+  const [removed] = nextGroups.splice(fromIndex, 1);
+  nextGroups.splice(toIndex, 0, removed);
   updateState({ ...state, groups: nextGroups }, { pushHash: true });
 }
 
@@ -303,5 +474,13 @@ export function useStore(): StoreView {
     sheet: currentSheet,
     setSheet,
     jumpToday,
+    createGroup,
+    updateGroup,
+    deleteGroup,
+    undoDelete,
+    reorderGroup,
+    toast: currentToast,
+    dismissToast,
+    showToast,
   };
 }
