@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "preact/hooks";
+import { useEffect, useMemo, useRef } from "preact/hooks";
 import { dayOfMonth, monthGrid } from "../state/dates";
 import { monthTitle, weekdayLong, weekdayShort } from "../ui/i18n";
 import { onColor } from "../state/palette";
@@ -15,8 +15,39 @@ export function MonthGrid(props: {
   today: { y: number; idx: number };
   isMarked: (y: number, idx: number) => boolean;
   onToggle: (y: number, idx: number) => void;
+  onSetMark?: (
+    y: number,
+    idx: number,
+    value: boolean,
+    pushHash?: boolean,
+  ) => void;
+  onCommitMarks?: () => void;
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
+  const isPointerDragging = useRef(false);
+  const dragTargetValue = useRef<boolean>(true);
+  const dragStartedCell = useRef<{ y: number; idx: number } | null>(null);
+  const hasDragMoved = useRef(false);
+
+  useEffect(() => {
+    const handleGlobalUp = () => {
+      if (isPointerDragging.current) {
+        isPointerDragging.current = false;
+        if (hasDragMoved.current) {
+          props.onCommitMarks?.();
+        }
+      }
+      dragStartedCell.current = null;
+      hasDragMoved.current = false;
+    };
+    window.addEventListener("pointerup", handleGlobalUp);
+    window.addEventListener("pointercancel", handleGlobalUp);
+    return () => {
+      window.removeEventListener("pointerup", handleGlobalUp);
+      window.removeEventListener("pointercancel", handleGlobalUp);
+    };
+  }, [props.onCommitMarks]);
+
   const spec = useMemo(
     () =>
       monthGrid(props.year, props.month, props.weekStart, props.skipWeekends),
@@ -86,7 +117,40 @@ export function MonthGrid(props: {
               }}
               aria-pressed={marked}
               aria-label={`${d} ${long[c.wd]}`}
-              onClick={() => props.onToggle(c.ref.y, c.ref.idx)}
+              onPointerDown={(e) => {
+                if (e.pointerType !== "mouse" || e.button !== 0) return;
+                const currentlyMarked = props.isMarked(c.ref.y, c.ref.idx);
+                isPointerDragging.current = true;
+                dragTargetValue.current = !currentlyMarked;
+                dragStartedCell.current = { y: c.ref.y, idx: c.ref.idx };
+                hasDragMoved.current = false;
+              }}
+              onPointerEnter={(e) => {
+                if (!isPointerDragging.current || e.pointerType !== "mouse")
+                  return;
+                if (!hasDragMoved.current && dragStartedCell.current) {
+                  hasDragMoved.current = true;
+                  props.onSetMark?.(
+                    dragStartedCell.current.y,
+                    dragStartedCell.current.idx,
+                    dragTargetValue.current,
+                    false,
+                  );
+                }
+                props.onSetMark?.(
+                  c.ref.y,
+                  c.ref.idx,
+                  dragTargetValue.current,
+                  false,
+                );
+              }}
+              onClick={(e) => {
+                if (hasDragMoved.current) {
+                  e.preventDefault();
+                  return;
+                }
+                props.onToggle(c.ref.y, c.ref.idx);
+              }}
               onKeyDown={(e) => onKeyDown(e, i)}
             >
               {d}

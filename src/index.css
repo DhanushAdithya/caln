@@ -302,6 +302,12 @@ button:focus-visible,
   height: var(--mx);
   border-radius: var(--radius);
   background: var(--cell);
+  display: block;
+  cursor: pointer;
+}
+.mx-cell:hover {
+  outline: 1.5px solid var(--text);
+  outline-offset: -1px;
 }
 .mx-cell.f {
   opacity: 0.38;
@@ -317,6 +323,12 @@ button:focus-visible,
   letter-spacing: 0.02em;
   white-space: nowrap;
   overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+}
+.mx-lab:hover {
+  color: var(--text);
 }
 .mx-wd {
   grid-column: 1;
@@ -388,6 +400,8 @@ button:focus-visible,
   font-size: 12.5px;
   font-weight: 600;
   background: var(--cell-dim);
+  user-select: none;
+  -webkit-user-select: none;
 }
 .mg-d:hover {
   background: var(--hover);

@@ -2,6 +2,7 @@ import {
   daysInYear,
   matrixLayout,
   matrixMonthLabels,
+  monthOfYear,
   weekdayOf,
 } from "../state/dates";
 import { weekdayNarrow, monthNames } from "../ui/i18n";
@@ -13,6 +14,7 @@ export function Matrix(props: {
   today: { y: number; idx: number };
   color: string;
   isMarked: (idx: number) => boolean;
+  onSelectMonth?: (m: number) => void;
 }) {
   const L = matrixLayout(props.year, props.weekStart, props.skipWeekends);
   const labels = matrixMonthLabels(props.year, props.weekStart);
@@ -32,15 +34,19 @@ export function Matrix(props: {
       (future ? " f" : "") +
       (props.isMarked(idx) ? " mk" : "") +
       (sameYear && props.today.idx === idx ? " t" : "");
+    const m = monthOfYear(props.year, idx);
     cells.push(
-      <span
+      <button
         key={idx}
+        type="button"
         class={cls}
         style={{
           gridColumn: L.colOf(idx) + 1,
           gridRow: row + 1,
           ...(props.isMarked(idx) ? { background: props.color } : null),
         }}
+        aria-label={`Jump to ${monthNamesS[m]}`}
+        onClick={() => props.onSelectMonth?.(m)}
       />,
     );
   }
@@ -55,13 +61,16 @@ export function Matrix(props: {
         }}
       >
         {labels.map((l) => (
-          <span
+          <button
             key={`m${l.m}`}
+            type="button"
             class="mx-lab"
             style={{ gridColumn: `${l.col + 2} / span 2`, gridRow: 1 }}
+            aria-label={`Jump to ${monthNamesS[l.m]}`}
+            onClick={() => props.onSelectMonth?.(l.m)}
           >
             {monthNamesS[l.m]}
-          </span>
+          </button>
         ))}
         {L.rows.map((wd, i) => (
           <span key={`w${wd}`} class="mx-wd" style={{ gridRow: i + 2 }}>

@@ -49,6 +49,7 @@ export function App() {
           today={today}
           color={hex}
           isMarked={(idx) => isMarked(ui.year, idx)}
+          onSelectMonth={ui.setMonth}
         />
 
         <MonthTabs month={ui.month} onSet={ui.setMonth} />
@@ -64,6 +65,10 @@ export function App() {
           today={today}
           isMarked={isMarked}
           onToggle={(y, idx) => ui.toggle(ui.sel, y, idx)}
+          onSetMark={(y, idx, val, push) =>
+            ui.setMark(ui.sel, y, idx, val, push)
+          }
+          onCommitMarks={ui.commitMarks}
         />
       </main>
 

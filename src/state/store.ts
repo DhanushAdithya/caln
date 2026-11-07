@@ -37,6 +37,14 @@ export interface StoreView {
   setMonth: (m: number) => void;
   hasMark: (groupIndex: number, year: number, dayIdx: number) => boolean;
   toggle: (groupIndex: number, year: number, dayIdx: number) => void;
+  setMark: (
+    groupIndex: number,
+    year: number,
+    dayIdx: number,
+    value: boolean,
+    pushHash?: boolean,
+  ) => void;
+  commitMarks: () => void;
   settings: Settings;
   setSetting: <K extends keyof Settings>(k: K, v: Settings[K]) => void;
   sheet: Sheet;
@@ -349,23 +357,25 @@ function jumpToday(): void {
   }
 }
 
-function toggleMark(groupIndex: number, year: number, dayIdx: number): void {
+function setMark(
+  groupIndex: number,
+  year: number,
+  dayIdx: number,
+  value: boolean,
+  pushHash = true,
+): void {
   const group = state.groups[groupIndex];
-  if (!group) {
-    showToast("Create a group first", {
-      label: "+ New",
-      onClick: () => setSheet("groups"),
-    });
-    return;
-  }
+  if (!group) return;
 
   const currentYearMarks = group.years[year];
+  const currentlyMarked = isDayMarked(currentYearMarks, dayIdx);
+  if (currentlyMarked === value) return;
+
   const nextMarks = currentYearMarks
     ? new Uint8Array(currentYearMarks)
     : new Uint8Array(46);
 
-  const currentlyMarked = isDayMarked(nextMarks, dayIdx);
-  setDayMark(nextMarks, dayIdx, !currentlyMarked);
+  setDayMark(nextMarks, dayIdx, value);
 
   const nextYears = { ...group.years };
   if (hasAnyMarks(nextMarks)) {
@@ -378,7 +388,29 @@ function toggleMark(groupIndex: number, year: number, dayIdx: number): void {
     i === groupIndex ? { ...g, years: nextYears } : g,
   );
 
-  updateState({ ...state, groups: nextGroups }, { pushHash: true });
+  updateState({ ...state, groups: nextGroups }, { pushHash });
+}
+
+function commitMarks(): void {
+  if (typeof window === "undefined") return;
+  encodeHash(state).then((h) => {
+    lastWrittenHash = h;
+    window.history.pushState(null, "", h);
+  });
+}
+
+function toggleMark(groupIndex: number, year: number, dayIdx: number): void {
+  const group = state.groups[groupIndex];
+  if (!group) {
+    showToast("Create a group first", {
+      label: "+ New",
+      onClick: () => setSheet("groups"),
+    });
+    return;
+  }
+
+  const currentlyMarked = isDayMarked(group.years[year], dayIdx);
+  setMark(groupIndex, year, dayIdx, !currentlyMarked, true);
 }
 
 function createGroup(name: string, color?: number): number {
@@ -515,6 +547,8 @@ export function useStore(): StoreView {
       return isDayMarked(g?.years[y], idx);
     },
     toggle: toggleMark,
+    setMark,
+    commitMarks,
     settings,
     setSetting,
     sheet: currentSheet,
