@@ -56,6 +56,7 @@ export interface StoreView {
   ) => void;
   canInstall: boolean;
   installApp: () => Promise<void>;
+  share: () => Promise<void>;
 }
 
 function createDefaultState(): State {
@@ -182,6 +183,8 @@ if (typeof window !== "undefined") {
       state = decoded;
       notify();
       scheduleIdbSave(decoded);
+    } else if (hash) {
+      showToast("This link can't be read");
     }
   });
 }
@@ -202,6 +205,8 @@ export function initStore(): Promise<void> {
       loadedState = await decodeHash(window.location.hash);
       if (loadedState) {
         scheduleIdbSave(loadedState);
+      } else {
+        showToast("This link can't be read");
       }
     }
 
@@ -260,6 +265,30 @@ async function installApp(): Promise<void> {
   if (choice.outcome === "accepted") {
     deferredInstallPrompt = null;
     notify();
+  }
+}
+
+async function shareLink(): Promise<void> {
+  if (typeof window === "undefined") return;
+  const url = window.location.href;
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: "caln",
+        url,
+      });
+      return;
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") {
+        return;
+      }
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast("Link copied to clipboard");
+  } catch {
+    showToast("Failed to copy link");
   }
 }
 
@@ -501,5 +530,6 @@ export function useStore(): StoreView {
     showToast,
     canInstall: Boolean(deferredInstallPrompt),
     installApp,
+    share: shareLink,
   };
 }

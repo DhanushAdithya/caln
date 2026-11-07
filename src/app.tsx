@@ -21,7 +21,10 @@ export function App() {
 
   return (
     <>
-      <Header onGear={() => ui.setSheet(ui.sheet ? null : "settings")} />
+      <Header
+        onGear={() => ui.setSheet(ui.sheet ? null : "settings")}
+        onShare={ui.share}
+      />
       <main class="wrap">
         <section class="row1">
           <GroupSelect

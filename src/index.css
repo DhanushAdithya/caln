@@ -97,6 +97,11 @@ button:focus-visible,
   font-weight: 800;
   letter-spacing: -0.02em;
 }
+.hdr-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 .icon-btn {
   width: 36px;
   height: 36px;
