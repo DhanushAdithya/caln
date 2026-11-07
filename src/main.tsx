@@ -49,8 +49,13 @@ if ("serviceWorker" in navigator && !import.meta.env.DEV) {
         console.error("SW registration failed:", err);
       });
 
+    let hadController = Boolean(navigator.serviceWorker.controller);
     let refreshing = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController) {
+        hadController = true;
+        return;
+      }
       if (!refreshing) {
         refreshing = true;
         window.location.reload();
