@@ -11,6 +11,7 @@
   --cell-dim: #f0f0f3;
   --wk: #dc2626;
   --shadow: 0 14px 36px rgba(0, 0, 0, 0.14);
+  --radius: 0;
 }
 
 :root[data-theme="dark"] {
@@ -25,6 +26,7 @@
   --cell-dim: #1b1c22;
   --wk: #f87171;
   --shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+  --radius: 0;
 }
 
 * {
@@ -65,7 +67,7 @@ button:focus-visible,
 [role="switch"]:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 2px;
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 
 .wrap {
@@ -100,7 +102,7 @@ button:focus-visible,
   height: 36px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: var(--radius);
 }
 .icon-btn:hover {
   background: var(--hover);
@@ -123,7 +125,7 @@ button:focus-visible,
   gap: 7px;
   height: 34px;
   padding: 0 11px;
-  border-radius: 10px;
+  border-radius: var(--radius);
   border: 1px solid var(--line);
   background: var(--surface);
   font-size: 13.5px;
@@ -148,7 +150,7 @@ button:focus-visible,
   overflow: auto;
   padding: 6px;
   border: 1px solid var(--line);
-  border-radius: 13px;
+  border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow);
   z-index: 30;
@@ -163,7 +165,7 @@ button:focus-visible,
   gap: 9px;
   width: 100%;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   text-align: left;
   font-size: 13.5px;
 }
@@ -173,7 +175,7 @@ button:focus-visible,
 .dd-row {
   display: flex;
   align-items: center;
-  border-radius: 8px;
+  border-radius: var(--radius);
   transition: background 0.1s ease;
 }
 .dd-row:hover {
@@ -191,7 +193,7 @@ button:focus-visible,
   padding: 8px 10px;
   text-align: left;
   font-size: 13.5px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   cursor: pointer;
 }
 .dd-pick:hover {
@@ -208,7 +210,7 @@ button:focus-visible,
   place-items: center;
   width: 26px;
   height: 26px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   color: var(--muted);
   cursor: pointer;
   transition:
@@ -242,7 +244,7 @@ button:focus-visible,
 .dot {
   width: 10px;
   height: 10px;
-  border-radius: 50%;
+  border-radius: var(--radius);
   flex: none;
 }
 .dd-new {
@@ -250,7 +252,7 @@ button:focus-visible,
   padding-top: 10px;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  border-radius: 0 0 8px 8px;
+  border-radius: var(--radius);
   cursor: pointer;
 }
 .dd-new:hover {
@@ -260,7 +262,7 @@ button:focus-visible,
   font-weight: 650;
   border-bottom: 1px solid var(--line);
   margin-bottom: 3px;
-  border-radius: 8px 8px 0 0;
+  border-radius: var(--radius);
 }
 .yr-menu {
   min-width: 96px;
@@ -293,7 +295,7 @@ button:focus-visible,
 .mx-cell {
   width: var(--mx);
   height: var(--mx);
-  border-radius: 3px;
+  border-radius: var(--radius);
   background: var(--cell);
 }
 .mx-cell.f {
@@ -330,7 +332,7 @@ button:focus-visible,
   flex: 1 0 auto;
   min-height: 32px;
   padding: 0 13px;
-  border-radius: 10px;
+  border-radius: var(--radius);
   border: 1px solid var(--line);
   background: var(--surface);
   font-size: 12.5px;
@@ -377,7 +379,7 @@ button:focus-visible,
   aspect-ratio: 1;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: var(--radius);
   font-size: 12.5px;
   font-weight: 600;
   background: var(--cell-dim);
@@ -416,7 +418,7 @@ button:focus-visible,
   background: var(--surface);
   border: 1px solid var(--line);
   border-bottom: 0;
-  border-radius: 18px 18px 0 0;
+  border-radius: var(--radius);
   box-shadow: var(--shadow);
   z-index: 41;
 }
@@ -448,7 +450,7 @@ button:focus-visible,
   padding: 5px 14px;
   background: var(--text);
   color: var(--bg);
-  border-radius: 8px;
+  border-radius: var(--radius);
   font-size: 13px;
   font-weight: 650;
   cursor: pointer;
@@ -461,12 +463,12 @@ button:focus-visible,
   display: flex;
   gap: 2px;
   padding: 3px;
-  border-radius: 10px;
+  border-radius: var(--radius);
   background: var(--cell-dim);
 }
 .seg button {
   padding: 5px 11px;
-  border-radius: 7px;
+  border-radius: var(--radius);
   font-size: 12.5px;
   font-weight: 650;
   color: var(--muted);
@@ -480,7 +482,7 @@ button:focus-visible,
   position: relative;
   width: 42px;
   height: 25px;
-  border-radius: 99px;
+  border-radius: var(--radius);
   background: var(--cell);
   transition: background 0.15s ease;
   flex: none;
@@ -492,7 +494,7 @@ button:focus-visible,
   left: 3px;
   width: 19px;
   height: 19px;
-  border-radius: 99px;
+  border-radius: var(--radius);
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   transition: left 0.15s ease;
@@ -535,7 +537,7 @@ button:focus-visible,
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--line);
   color: var(--text);
-  border-radius: 12px;
+  border-radius: var(--radius);
   box-shadow: var(--shadow);
   font-size: 13.5px;
   font-weight: 550;
@@ -553,7 +555,7 @@ button:focus-visible,
   font-weight: 650;
   font-size: 12.5px;
   padding: 4px 10px;
-  border-radius: 7px;
+  border-radius: var(--radius);
   cursor: pointer;
   flex: none;
   transition: opacity 0.12s ease;
@@ -566,7 +568,7 @@ button:focus-visible,
   place-items: center;
   width: 24px;
   height: 24px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   color: var(--muted);
   cursor: pointer;
   flex: none;
@@ -605,7 +607,7 @@ button:focus-visible,
 .dot-preview {
   width: 14px;
   height: 14px;
-  border-radius: 50%;
+  border-radius: var(--radius);
   flex: none;
 }
 .sh-input {
@@ -614,7 +616,7 @@ button:focus-visible,
   padding: 0 12px;
   background: var(--cell-dim);
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: var(--radius);
   font-size: 14px;
   color: var(--text);
 }
@@ -626,7 +628,7 @@ button:focus-visible,
   padding: 0 14px;
   background: var(--text);
   color: var(--bg);
-  border-radius: 9px;
+  border-radius: var(--radius);
   font-size: 13.5px;
   font-weight: 650;
   cursor: pointer;
@@ -648,7 +650,7 @@ button:focus-visible,
 .swatch-btn {
   width: 22px;
   height: 22px;
-  border-radius: 50%;
+  border-radius: var(--radius);
   cursor: pointer;
   transition: transform 0.1s;
 }
@@ -680,7 +682,7 @@ button:focus-visible,
 .sh-color-pill {
   width: 16px;
   height: 16px;
-  border-radius: 50%;
+  border-radius: var(--radius);
   flex: none;
   cursor: pointer;
   border: 2px solid var(--surface);
@@ -692,7 +694,7 @@ button:focus-visible,
   padding: 0 8px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--radius);
   font-size: 14px;
   color: var(--text);
   font-weight: 550;
@@ -712,7 +714,7 @@ button:focus-visible,
   place-items: center;
   width: 28px;
   height: 28px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   color: var(--muted);
   cursor: pointer;
 }
