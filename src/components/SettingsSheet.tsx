@@ -44,6 +44,8 @@ export function SettingsSheet(props: {
   settings: Settings;
   onSet: <K extends keyof Settings>(k: K, v: Settings[K]) => void;
   onClose: () => void;
+  canInstall?: boolean;
+  onInstall?: () => void;
 }) {
   if (!props.open) return null;
   const s = props.settings;
@@ -119,7 +121,7 @@ export function SettingsSheet(props: {
           />
         </div>
 
-        <div class="sh-row sh-last">
+        <div class="sh-row">
           <span>Highlight today</span>
           <Switch
             checked={s.highlightToday}
@@ -127,6 +129,19 @@ export function SettingsSheet(props: {
             onToggle={() => props.onSet("highlightToday", !s.highlightToday)}
           />
         </div>
+
+        {props.canInstall && props.onInstall && (
+          <div class="sh-row sh-last">
+            <span>Install app</span>
+            <button
+              type="button"
+              class="sh-install-btn"
+              onClick={props.onInstall}
+            >
+              Install
+            </button>
+          </div>
+        )}
       </div>
     </>
   );

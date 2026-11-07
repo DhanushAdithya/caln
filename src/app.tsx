@@ -69,6 +69,8 @@ export function App() {
         settings={ui.settings}
         onSet={ui.setSetting}
         onClose={() => ui.setSheet(null)}
+        canInstall={ui.canInstall}
+        onInstall={ui.installApp}
       />
 
       <EditSheet

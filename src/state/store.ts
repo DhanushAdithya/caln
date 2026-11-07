@@ -54,6 +54,8 @@ export interface StoreView {
     action?: { label: string; onClick: () => void },
     durationMs?: number,
   ) => void;
+  canInstall: boolean;
+  installApp: () => Promise<void>;
 }
 
 function createDefaultState(): State {
@@ -176,14 +178,6 @@ if (typeof window !== "undefined") {
     if (hash === lastWrittenHash) return;
     const decoded = await decodeHash(hash);
     if (decoded) {
-      if (
-        decoded.groups.some(
-          (g) =>
-            g.name === "Work" || g.name === "Gym" || g.name === "Vacation",
-        )
-      ) {
-        return;
-      }
       lastWrittenHash = hash;
       state = decoded;
       notify();
@@ -220,13 +214,7 @@ export function initStore(): Promise<void> {
       }
     }
 
-    const hasOldDefaults =
-      loadedState &&
-      loadedState.groups.some(
-        (g) => g.name === "Work" || g.name === "Gym" || g.name === "Vacation",
-      );
-
-    if (!loadedState || hasOldDefaults) {
+    if (!loadedState) {
       loadedState = createDefaultState();
       if (typeof window !== "undefined") {
         const h = await encodeHash(loadedState);
@@ -246,7 +234,36 @@ if (typeof window !== "undefined") {
   initStore();
 }
 
-function showToast(
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
+let deferredInstallPrompt: BeforeInstallPromptEvent | null = null;
+
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e as BeforeInstallPromptEvent;
+    notify();
+  });
+  window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    notify();
+  });
+}
+
+async function installApp(): Promise<void> {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  const choice = await deferredInstallPrompt.userChoice;
+  if (choice.outcome === "accepted") {
+    deferredInstallPrompt = null;
+    notify();
+  }
+}
+
+export function showToast(
   msg: string,
   action?: { label: string; onClick: () => void },
   durationMs = 3000,
@@ -482,5 +499,7 @@ export function useStore(): StoreView {
     toast: currentToast,
     dismissToast,
     showToast,
+    canInstall: Boolean(deferredInstallPrompt),
+    installApp,
   };
 }
