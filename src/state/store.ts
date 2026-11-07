@@ -124,6 +124,12 @@ function applyTheme(theme: ThemeName): void {
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.dataset.theme = dark ? "dark" : "light";
+  const themeMeta = document.querySelector(
+    'meta[name="theme-color"]:not([media])',
+  );
+  if (themeMeta) {
+    themeMeta.setAttribute("content", dark ? "#101014" : "#fafafa");
+  }
 }
 
 if (typeof window !== "undefined") {
