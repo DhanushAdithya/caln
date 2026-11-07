@@ -1,14 +1,450 @@
-:root {
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #fafafa;
+  --text: #17181c;
+  --muted: #6b7076;
+  --line: #e4e4e7;
+  --hover: rgba(0, 0, 0, 0.05);
+  --surface: #ffffff;
+  --cell: #e2e3e9;
+  --cell-dim: #f0f0f3;
+  --wk: #dc2626;
+  --shadow: 0 14px 36px rgba(0, 0, 0, 0.14);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #101014;
+  --text: #ececf0;
+  --muted: #8b909a;
+  --line: #26272e;
+  --hover: rgba(255, 255, 255, 0.07);
+  --surface: #17181d;
+  --cell: #2e3039;
+  --cell-dim: #1b1c22;
+  --wk: #f87171;
+  --shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
 }
 
 body {
+  background: var(--bg);
+  color: var(--text);
+  font:
+    15px/1.45 system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  overflow-x: hidden;
+  overflow-x: clip;
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeSpeed;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+button:focus-visible,
+[role="switch"]:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 6px 16px 48px;
+}
+
+/* header — single row, sticky, hairline */
+.hdr {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.hdr-in {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.logo {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+}
+.icon-btn:hover {
+  background: var(--hover);
+}
+
+/* section 1 — dropdown row */
+.row1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-block: 12px 6px;
+}
+
+/* dropdowns */
+.dd {
+  position: relative;
+}
+.dd-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 11px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 13.5px;
+  font-weight: 650;
+}
+.dd-btn:hover {
+  background: var(--hover);
+}
+.chev {
+  color: var(--muted);
+  transition: transform 0.12s ease;
+}
+.dd-btn[aria-expanded="true"] .chev {
+  transform: rotate(180deg);
+}
+.dd-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 190px;
+  max-height: 330px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  z-index: 30;
+}
+.dd-r .dd-menu {
+  left: auto;
+  right: 0;
+}
+.dd-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 13.5px;
+}
+.dd-item:hover {
+  background: var(--hover);
+}
+.dd-check {
+  margin-left: auto;
+  font-size: 12px;
+  opacity: 0.85;
+}
+.dd-name {
+  margin-right: auto;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+.dd-new {
+  margin-top: 5px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 0 0 8px 8px;
+  cursor: default;
+}
+.dd-today {
+  font-weight: 650;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 3px;
+  border-radius: 8px 8px 0 0;
+}
+.yr-menu {
+  min-width: 96px;
+  text-align: right;
+}
+.yr-menu .dd-item {
+  justify-content: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* bleed + scroll: desktop = capped by the centered 720px frame, no scrollbar;
+   mobile = scroller extends to the viewport edges (-16px eats the wrap gutters) */
+.scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  margin-inline: -16px;
+  padding-inline: 16px;
+}
+.scroll-x::-webkit-scrollbar {
+  display: none;
+}
+
+/* section 2 — contribution matrix */
+.mx {
+  --mx: 11px;
+  display: grid;
+  gap: 3px;
+  width: max-content;
+  margin-inline: auto;
+  padding-block: 10px 8px;
+}
+.mx-cell {
+  width: var(--mx);
+  height: var(--mx);
+  border-radius: 3px;
+  background: var(--cell);
+}
+.mx-cell.f {
+  opacity: 0.38;
+}
+.mx-cell.t {
+  box-shadow: inset 0 0 0 1.5px var(--text);
+}
+.mx-lab {
+  font-size: 9px;
+  font-weight: 650;
+  line-height: 12px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.mx-wd {
+  grid-column: 1;
+  font-size: 8.5px;
+  line-height: 11px;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* section 3 — month tabs */
+.tabs {
+  display: flex;
+  gap: 6px;
+  min-width: 100%;
+  width: max-content;
+  padding-block: 4px;
+}
+.tab {
+  flex: 1 0 auto;
+  min-height: 32px;
+  padding: 0 13px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.tab:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.tab[aria-pressed="true"] {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+
+/* section 4 — month calendar */
+.mg-sec {
+  margin-top: 14px;
+}
+.mg-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.mg-title {
   margin: 0;
+  font-size: 16.5px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+.mg {
+  display: grid;
+  gap: 5px;
+}
+.mg-wd {
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.mg-d {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: var(--cell-dim);
+}
+.mg-d:hover {
+  background: var(--hover);
+}
+.mg-d.wk {
+  color: var(--wk);
+}
+.mg-d.out {
+  color: var(--muted);
+  opacity: 0.55;
+  background: transparent;
+}
+.mg-d.t {
+  box-shadow: inset 0 0 0 1.5px var(--text);
+}
+.mg-d.mk {
+  color: #fff;
+}
+
+/* settings sheet */
+.ovl {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  z-index: 40;
+}
+.sheet {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(560px, 100%);
+  padding: 14px 18px 30px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: 18px 18px 0 0;
+  box-shadow: var(--shadow);
+  z-index: 41;
+}
+.sh-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.sh-head b {
+  font-size: 15px;
+}
+.sh-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.sh-row.sh-last,
+.sh-row:last-of-type {
+  border-bottom: 0;
+}
+
+/* segmented control */
+.seg {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--cell-dim);
+}
+.seg button {
+  padding: 5px 11px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--muted);
+}
+.seg button[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* switch */
+.switch {
+  position: relative;
+  width: 42px;
+  height: 25px;
+  border-radius: 99px;
+  background: var(--cell);
+  transition: background 0.15s ease;
+  flex: none;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 19px;
+  height: 19px;
+  border-radius: 99px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: left 0.15s ease;
+}
+.switch[aria-checked="true"] {
+  background: var(--text);
+}
+.switch[aria-checked="true"]::after {
+  left: 20px;
+}
+
+@media (min-width: 700px) {
+  .mg-d {
+    font-size: 13.5px;
+  }
+  /* 10px cells → even 54-column leap years (719px) fit the 720px frame:
+       desktop never scrolls */
+  .mx {
+    --mx: 10px;
+  }
 }
