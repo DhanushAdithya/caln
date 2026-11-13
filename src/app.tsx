@@ -108,6 +108,9 @@ export function App() {
         onClose={() => ui.setSheet(null)}
         canInstall={ui.canInstall}
         onInstall={ui.installApp}
+        isSharedTemp={ui.isSharedTemp}
+        onSaveShared={ui.saveSharedToLocal}
+        onDiscardShared={ui.discardShared}
       />
 
       <EditSheet

@@ -134,7 +134,7 @@ function base64UrlToBytes(str: string): Uint8Array {
   return bytes;
 }
 
-function serializeBinary(state: State): Uint8Array {
+export function serializeBinary(state: State): Uint8Array {
   const buf: number[] = [];
   buf.push(0x43, 0x4e);
   writeUVarint(buf, 1);
@@ -332,4 +332,16 @@ export async function decodeHash(hash: string): Promise<State | null> {
   } catch {
     return null;
   }
+}
+
+export function areStatesEqual(a: State, b: State): boolean {
+  if (a.v !== b.v) return false;
+  if (a.groups.length !== b.groups.length) return false;
+  const binA = serializeBinary(a);
+  const binB = serializeBinary(b);
+  if (binA.length !== binB.length) return false;
+  for (let i = 0; i < binA.length; i++) {
+    if (binA[i] !== binB[i]) return false;
+  }
+  return true;
 }

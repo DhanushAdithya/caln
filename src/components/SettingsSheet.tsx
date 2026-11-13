@@ -46,6 +46,9 @@ export function SettingsSheet(props: {
   onClose: () => void;
   canInstall?: boolean;
   onInstall?: () => void;
+  isSharedTemp?: boolean;
+  onSaveShared?: () => void;
+  onDiscardShared?: () => void;
 }) {
   if (!props.open) return null;
   const s = props.settings;
@@ -129,6 +132,43 @@ export function SettingsSheet(props: {
             onToggle={() => props.onSet("highlightToday", !s.highlightToday)}
           />
         </div>
+
+        {props.isSharedTemp && (
+          <div class="sh-row">
+            <span>Shared calendar (temp)</span>
+            <div style={{ display: "flex", gap: "6px" }}>
+              {props.onDiscardShared && (
+                <button
+                  type="button"
+                  class="sh-install-btn"
+                  onClick={() => {
+                    props.onDiscardShared?.();
+                    props.onClose();
+                  }}
+                >
+                  Discard
+                </button>
+              )}
+              {props.onSaveShared && (
+                <button
+                  type="button"
+                  class="sh-install-btn"
+                  style={{
+                    background: "var(--text)",
+                    color: "var(--bg)",
+                    borderColor: "var(--text)",
+                  }}
+                  onClick={() => {
+                    props.onSaveShared?.();
+                    props.onClose();
+                  }}
+                >
+                  Add to calendar
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {props.canInstall && props.onInstall && (
           <div class="sh-row sh-last">

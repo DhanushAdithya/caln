@@ -2,6 +2,7 @@ import { useEffect, useState } from "preact/hooks";
 import {
   decodeHash,
   encodeHash,
+  areStatesEqual,
   hasAnyMarks,
   isDayMarked,
   setDayMark,
@@ -67,6 +68,9 @@ export interface StoreView {
   canInstall: boolean;
   installApp: () => Promise<void>;
   share: () => Promise<void>;
+  isSharedTemp: boolean;
+  saveSharedToLocal: () => void;
+  discardShared: () => Promise<void>;
 }
 
 function createDefaultState(): State {
@@ -146,9 +150,10 @@ if (typeof window !== "undefined") {
 
 let idbTimer: number | null = null;
 let lastWrittenHash = "";
+let isSharedTemp = false;
 
 function scheduleIdbSave(targetState: State): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || isSharedTemp) return;
   if (idbTimer !== null) {
     window.clearTimeout(idbTimer);
   }
@@ -156,6 +161,93 @@ function scheduleIdbSave(targetState: State): void {
     idbTimer = null;
     idbSet("state", targetState);
   }, 500);
+}
+
+async function saveSharedToLocal(): Promise<void> {
+  isSharedTemp = false;
+  const savedState = await idbGet<State>("state");
+
+  if (!savedState || savedState.groups.length === 0) {
+    if (idbTimer !== null) {
+      window.clearTimeout(idbTimer);
+      idbTimer = null;
+    }
+    await idbSet("state", state);
+    showToast("Saved to local state");
+    return;
+  }
+
+  const incomingGroups = state.groups;
+  let nextId = Math.max(
+    savedState.nextGroupId,
+    ...savedState.groups.map((g) => g.id + 1),
+  );
+
+  const newGroups: Group[] = [];
+  let firstNewId: number | null = null;
+
+  for (const g of incomingGroups) {
+    const assignedId = nextId++;
+    if (firstNewId === null) firstNewId = assignedId;
+
+    const clonedYears: Record<number, Uint8Array> = {};
+    if (g.years) {
+      for (const y of Object.keys(g.years).map(Number)) {
+        clonedYears[y] = new Uint8Array(g.years[y]);
+      }
+    }
+
+    newGroups.push({
+      id: assignedId,
+      name: g.name,
+      color: g.color,
+      years: clonedYears,
+    });
+  }
+
+  const mergedGroups = [...savedState.groups, ...newGroups];
+  const mergedState: State = {
+    v: 1,
+    nextGroupId: nextId,
+    groups: mergedGroups,
+    active: firstNewId ?? savedState.active,
+    year: state.year,
+    month: state.month,
+  };
+
+  state = mergedState;
+
+  if (idbTimer !== null) {
+    window.clearTimeout(idbTimer);
+    idbTimer = null;
+  }
+  await idbSet("state", mergedState);
+  await writeHash(mergedState, true);
+  notify();
+
+  const count = newGroups.length;
+  const name = count === 1 ? `"${newGroups[0].name}"` : `${count} groups`;
+  showToast(`Added ${name} to your calendar`);
+}
+
+async function discardShared(): Promise<void> {
+  isSharedTemp = false;
+  const savedState = await idbGet<State>("state");
+  if (savedState) {
+    state = savedState;
+    const h = await encodeHash(savedState);
+    lastWrittenHash = h;
+    window.history.replaceState(null, "", h);
+  } else {
+    state = createDefaultState();
+    const h = await encodeHash(state);
+    lastWrittenHash = h;
+    window.history.replaceState(null, "", h);
+    idbSet("state", state);
+  }
+  currentToast = null;
+  notify();
+  showToast("Returned to your local calendar");
 }
 
 async function writeHash(targetState: State, push: boolean): Promise<void> {
@@ -183,6 +275,7 @@ function updateState(next: State, opts: { pushHash?: boolean } = {}): void {
 
 if (typeof window !== "undefined") {
   window.addEventListener("beforeunload", () => {
+    if (isSharedTemp) return;
     if (idbTimer !== null) {
       window.clearTimeout(idbTimer);
       idbTimer = null;
@@ -198,7 +291,9 @@ if (typeof window !== "undefined") {
       lastWrittenHash = hash;
       state = decoded;
       notify();
-      scheduleIdbSave(decoded);
+      if (!isSharedTemp) {
+        scheduleIdbSave(decoded);
+      }
     } else if (hash) {
       showToast("This link can't be read");
     }
@@ -216,36 +311,64 @@ export function initStore(): Promise<void> {
     }
     applyTheme(settings.theme);
 
+    const savedState = await idbGet<State>("state");
     let loadedState: State | null = null;
+    let isShared = false;
+
     if (typeof window !== "undefined" && window.location.hash) {
-      loadedState = await decodeHash(window.location.hash);
-      if (loadedState) {
-        scheduleIdbSave(loadedState);
+      const decoded = await decodeHash(window.location.hash);
+      if (decoded) {
+        if (!savedState || !areStatesEqual(decoded, savedState)) {
+          isShared = true;
+        }
+        loadedState = decoded;
       } else {
         showToast("This link can't be read");
       }
     }
 
     if (!loadedState) {
-      loadedState = await idbGet<State>("state");
-      if (loadedState && typeof window !== "undefined") {
-        const h = await encodeHash(loadedState);
-        lastWrittenHash = h;
-        window.history.replaceState(null, "", h);
-      }
-    }
-
-    if (!loadedState) {
-      loadedState = createDefaultState();
-      if (typeof window !== "undefined") {
-        const h = await encodeHash(loadedState);
-        lastWrittenHash = h;
-        window.history.replaceState(null, "", h);
-        scheduleIdbSave(loadedState);
+      if (savedState) {
+        loadedState = savedState;
+        if (typeof window !== "undefined") {
+          const h = await encodeHash(loadedState);
+          lastWrittenHash = h;
+          window.history.replaceState(null, "", h);
+        }
+      } else {
+        loadedState = createDefaultState();
+        if (typeof window !== "undefined") {
+          const h = await encodeHash(loadedState);
+          lastWrittenHash = h;
+          window.history.replaceState(null, "", h);
+          idbSet("state", loadedState);
+        }
       }
     }
 
     state = loadedState;
+    isSharedTemp = isShared;
+
+    if (isShared) {
+      const hasLocalGroups = savedState && savedState.groups.length > 0;
+      const count = loadedState.groups.length;
+      const promptMsg = hasLocalGroups
+        ? count === 1
+          ? `Add "${loadedState.groups[0]?.name || "shared group"}" to your calendar?`
+          : `Add ${count} shared groups to your calendar?`
+        : "Save shared calendar to local state?";
+      const actionLabel = hasLocalGroups ? "Add" : "Save";
+
+      showToast(
+        promptMsg,
+        {
+          label: actionLabel,
+          onClick: saveSharedToLocal,
+        },
+        0,
+      );
+    }
+
     notify();
   })();
   return initPromise;
@@ -597,5 +720,8 @@ export function useStore(): StoreView {
     canInstall: Boolean(deferredInstallPrompt),
     installApp,
     share: shareLink,
+    isSharedTemp,
+    saveSharedToLocal,
+    discardShared,
   };
 }

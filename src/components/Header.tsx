@@ -2,7 +2,9 @@ export function Header(props: { onGear: () => void; onShare: () => void }) {
   return (
     <header class="hdr">
       <div class="hdr-in">
-        <span class="logo">caln</span>
+        <a href="./" class="logo">
+          caln
+        </a>
         <div class="hdr-actions">
           <button
             type="button"
