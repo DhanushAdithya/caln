@@ -21,6 +21,13 @@ export function App() {
     m: today.m,
     d: today.d,
   }));
+  const [locked, setLocked] = useState(() => {
+    try {
+      return localStorage.getItem("caln_locked") === "true";
+    } catch {
+      return false;
+    }
+  });
   const group = ui.groups[ui.sel];
   const hex = group ? PALETTE[group.color] : "var(--cell)";
   const isMarked = (y: number, idx: number) =>
@@ -43,6 +50,47 @@ export function App() {
             onNew={() => ui.setSheet("groups")}
           />
           <div class="row1-right">
+            <button
+              type="button"
+              class={`lock-btn${locked ? " on" : ""}`}
+              onClick={() => {
+                setLocked((l) => {
+                  const next = !l;
+                  try {
+                    localStorage.setItem("caln_locked", String(next));
+                  } catch {}
+                  return next;
+                });
+              }}
+              aria-label={
+                locked ? "Unlock calendar entries" : "Lock calendar entries"
+              }
+              aria-pressed={locked}
+              title={
+                locked
+                  ? "Calendar locked (read-only entries, notes enabled)"
+                  : "Calendar unlocked (click to lock entries)"
+              }
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="11" width="18" height="11" />
+                {locked ? (
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                ) : (
+                  <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                )}
+              </svg>
+            </button>
             <button
               type="button"
               class="today-btn"
@@ -92,6 +140,7 @@ export function App() {
             ui.setMark(ui.sel, y, idx, val, push)
           }
           onCommitMarks={ui.commitMarks}
+          locked={locked}
         />
 
         <Notes

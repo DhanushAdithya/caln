@@ -32,6 +32,7 @@ export function MonthGrid(props: {
     pushHash?: boolean,
   ) => void;
   onCommitMarks?: () => void;
+  locked?: boolean;
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
   const isPointerDragging = useRef(false);
@@ -210,6 +211,7 @@ export function MonthGrid(props: {
               aria-pressed={marked}
               aria-label={`${d} ${long[c.wd]}`}
               onPointerDown={(e) => {
+                if (props.locked) return;
                 if (e.pointerType !== "mouse" || e.button !== 0) return;
                 const currentlyMarked = props.isMarked(c.ref.y, c.ref.idx);
                 isPointerDragging.current = true;
@@ -218,6 +220,7 @@ export function MonthGrid(props: {
                 hasDragMoved.current = false;
               }}
               onPointerEnter={(e) => {
+                if (props.locked) return;
                 if (!isPointerDragging.current || e.pointerType !== "mouse")
                   return;
                 if (!hasDragMoved.current && dragStartedCell.current) {
@@ -242,7 +245,9 @@ export function MonthGrid(props: {
                   return;
                 }
                 props.onSelectDate?.(c.ref.y, c.m, d);
-                props.onToggle(c.ref.y, c.ref.idx);
+                if (!props.locked) {
+                  props.onToggle(c.ref.y, c.ref.idx);
+                }
               }}
               onKeyDown={(e) => onKeyDown(e, i)}
             >
