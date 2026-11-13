@@ -18,7 +18,7 @@ import {
 import { idbGet, idbSet } from "./db";
 import { todayRef } from "./dates";
 
-export type Sheet = null | "settings" | "groups";
+export type Sheet = null | "settings" | "groups" | "stats";
 
 export interface ToastData {
   message: string;

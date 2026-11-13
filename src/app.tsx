@@ -10,6 +10,7 @@ import { MonthGrid } from "./components/MonthGrid";
 import { Notes } from "./components/Notes";
 import { SettingsSheet } from "./components/SettingsSheet";
 import { EditSheet } from "./components/EditSheet";
+import { StatSheet } from "./components/StatSheet";
 import { Toast } from "./components/Toast";
 import { useStore } from "./state/store";
 
@@ -82,6 +83,29 @@ export function App() {
               }
             >
               All
+            </button>
+            <button
+              type="button"
+              class={`stat-btn${ui.sheet === "stats" ? " on" : ""}`}
+              onClick={() => ui.setSheet(ui.sheet === "stats" ? null : "stats")}
+              aria-label="Statistics"
+              title="View statistics"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="18" y1="20" x2="18" y2="10" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+              </svg>
             </button>
           </div>
           <div class="row1-right">
@@ -213,6 +237,17 @@ export function App() {
         onUpdate={ui.updateGroup}
         onDelete={ui.deleteGroup}
         onReorder={ui.reorderGroup}
+      />
+
+      <StatSheet
+        open={ui.sheet === "stats"}
+        onClose={() => ui.setSheet(null)}
+        year={ui.year}
+        month={ui.month}
+        groups={ui.groups}
+        activeGroupIndex={ui.sel}
+        showAll={showAll}
+        color={hex}
       />
 
       <Toast toast={ui.toast} onDismiss={ui.dismissToast} />
