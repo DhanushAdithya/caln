@@ -1,4 +1,4 @@
-import { useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
 import {
   dayOfMonth,
   daysInMonth,
@@ -93,6 +93,41 @@ export function StatSheet(props: {
   const [period, setPeriod] = useState<
     "daily" | "weekly" | "monthly" | "yearly"
   >("daily");
+  const [viewYear, setViewYear] = useState(props.year);
+  const [viewMonth, setViewMonth] = useState(props.month);
+
+  useEffect(() => {
+    if (props.open) {
+      setViewYear(props.year);
+      setViewMonth(props.month);
+    }
+  }, [props.open, props.year, props.month]);
+
+  const handlePrev = () => {
+    if (period === "daily") {
+      if (viewMonth === 0) {
+        setViewMonth(11);
+        setViewYear((y) => y - 1);
+      } else {
+        setViewMonth((m) => m - 1);
+      }
+    } else if (period === "weekly" || period === "monthly") {
+      setViewYear((y) => y - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (period === "daily") {
+      if (viewMonth === 11) {
+        setViewMonth(0);
+        setViewYear((y) => y + 1);
+      } else {
+        setViewMonth((m) => m + 1);
+      }
+    } else if (period === "weekly" || period === "monthly") {
+      setViewYear((y) => y + 1);
+    }
+  };
 
   const mNames = useMemo(() => monthNames(), []);
   const activeGroup = props.groups[props.activeGroupIndex];
@@ -108,21 +143,21 @@ export function StatSheet(props: {
     const buckets: Bucket[] = [];
 
     if (period === "daily") {
-      const len = daysInMonth(props.year, props.month);
-      subtitle = `${monthTitle(props.year, props.month)}`;
+      const len = daysInMonth(viewYear, viewMonth);
+      subtitle = `${monthTitle(viewYear, viewMonth)}`;
       for (let d = 1; d <= len; d++) {
-        const idx = ymdToIdx(props.year, props.month, d);
+        const idx = ymdToIdx(viewYear, viewMonth, d);
         buckets.push({
-          label: `${mNames[props.month]} ${d}`,
+          label: `${mNames[viewMonth]} ${d}`,
           xLabel: d === 1 || d % 5 === 0 || d === len ? String(d) : "",
           countFn: (g: Group) =>
-            isDayMarked(g.years?.[props.year], idx) ? 1 : 0,
+            isDayMarked(g.years?.[viewYear], idx) ? 1 : 0,
         });
       }
     } else if (period === "weekly") {
-      const totalDays = daysInYear(props.year);
+      const totalDays = daysInYear(viewYear);
       const numWeeks = Math.ceil(totalDays / 7);
-      subtitle = `Year ${props.year}`;
+      subtitle = `Year ${viewYear}`;
       for (let w = 0; w < numWeeks; w++) {
         const start = w * 7;
         const end = Math.min(start + 7, totalDays);
@@ -135,24 +170,24 @@ export function StatSheet(props: {
           countFn: (g: Group) => {
             let count = 0;
             for (let idx = start; idx < end; idx++) {
-              if (isDayMarked(g.years?.[props.year], idx)) count++;
+              if (isDayMarked(g.years?.[viewYear], idx)) count++;
             }
             return count;
           },
         });
       }
     } else if (period === "monthly") {
-      subtitle = `Year ${props.year}`;
+      subtitle = `Year ${viewYear}`;
       for (let m = 0; m < 12; m++) {
-        const start = monthStarts(props.year)[m];
-        const len = daysInMonth(props.year, m);
+        const start = monthStarts(viewYear)[m];
+        const len = daysInMonth(viewYear, m);
         buckets.push({
           label: mNames[m],
           xLabel: mNames[m],
           countFn: (g: Group) => {
             let count = 0;
             for (let d = 0; d < len; d++) {
-              if (isDayMarked(g.years?.[props.year], start + d)) count++;
+              if (isDayMarked(g.years?.[viewYear], start + d)) count++;
             }
             return count;
           },
@@ -162,9 +197,9 @@ export function StatSheet(props: {
       // yearly
       subtitle = "Past Years";
       const yearSet = new Set<number>();
-      yearSet.add(props.year);
-      yearSet.add(props.year - 1);
-      yearSet.add(props.year - 2);
+      yearSet.add(viewYear);
+      yearSet.add(viewYear - 1);
+      yearSet.add(viewYear - 2);
       const relevant = props.showAll
         ? props.groups
         : [activeGroup].filter(Boolean);
@@ -237,8 +272,8 @@ export function StatSheet(props: {
     };
   }, [
     period,
-    props.year,
-    props.month,
+    viewYear,
+    viewMonth,
     props.showAll,
     props.groups,
     props.activeGroupIndex,
@@ -248,8 +283,8 @@ export function StatSheet(props: {
   ]);
 
   const singleStreak = useMemo(
-    () => computeGroupStreak(activeGroup, props.year),
-    [activeGroup, props.year],
+    () => computeGroupStreak(activeGroup, viewYear),
+    [activeGroup, viewYear],
   );
 
   const allStreaks = useMemo(
@@ -257,9 +292,9 @@ export function StatSheet(props: {
       props.groups.map((g) => ({
         group: g,
         color: PALETTE[g.color] ?? PALETTE[0],
-        streak: computeGroupStreak(g, props.year),
+        streak: computeGroupStreak(g, viewYear),
       })),
-    [props.groups, props.year],
+    [props.groups, viewYear],
   );
 
   const formatDate = (d: { y: number; m: number; d: number } | null) => {
@@ -274,11 +309,9 @@ export function StatSheet(props: {
   // SVG Chart Geometry
   const svgWidth = 460;
   const svgHeight = 160;
-  const padL = 34;
-  const padR = 16;
   const padT = 16;
   const padB = 26;
-  const chartW = svgWidth - padL - padR;
+  const chartW = svgWidth;
   const chartH = svgHeight - padT - padB;
 
   const { buckets, series, maxVal, midVal, subtitle } = chartData;
@@ -287,7 +320,7 @@ export function StatSheet(props: {
   const seriesWithGeometry = useMemo(() => {
     return series.map((s) => {
       const coordinates = s.values.map((val, i) => {
-        const x = padL + (i / Math.max(buckets.length - 1, 1)) * chartW;
+        const x = (i / Math.max(buckets.length - 1, 1)) * chartW;
         const y = padT + chartH - (val / maxVal) * chartH;
         return {
           x,
@@ -393,11 +426,59 @@ export function StatSheet(props: {
         {/* Line Chart Section */}
         <div class="stat-chart-wrap">
           <div class="stat-summary">
-            <span>{subtitle}</span>
-            <span>
-              Total: <b>{grandTotal}</b>{" "}
-              {grandTotal === 1 ? "entry" : "entries"}
-            </span>
+            <span class="stat-title">{subtitle}</span>
+            <div class="stat-summary-right">
+              <span class="stat-total">
+                Total: <b>{grandTotal}</b>{" "}
+                {grandTotal === 1 ? "entry" : "entries"}
+              </span>
+              {period !== "yearly" && (
+                <div class="stat-chevrons">
+                  <button
+                    type="button"
+                    class="stat-chevron-btn"
+                    onClick={handlePrev}
+                    aria-label={
+                      period === "daily" ? "Previous month" : "Previous year"
+                    }
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    class="stat-chevron-btn"
+                    onClick={handleNext}
+                    aria-label={period === "daily" ? "Next month" : "Next year"}
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           <svg
@@ -431,18 +512,18 @@ export function StatSheet(props: {
 
             {/* Grid horizontal lines */}
             <line
-              x1={padL}
+              x1={0}
               y1={padT}
-              x2={padL + chartW}
+              x2={chartW}
               y2={padT}
               stroke="var(--line)"
               stroke-width="1"
               stroke-dasharray="3,3"
             />
             <text
-              x={padL - 6}
-              y={padT + 3}
-              text-anchor="end"
+              x={0}
+              y={padT - 3}
+              text-anchor="start"
               font-size="9"
               fill="var(--muted)"
             >
@@ -450,18 +531,18 @@ export function StatSheet(props: {
             </text>
 
             <line
-              x1={padL}
+              x1={0}
               y1={padT + chartH / 2}
-              x2={padL + chartW}
+              x2={chartW}
               y2={padT + chartH / 2}
               stroke="var(--line)"
               stroke-width="1"
               stroke-dasharray="3,3"
             />
             <text
-              x={padL - 6}
-              y={padT + chartH / 2 + 3}
-              text-anchor="end"
+              x={0}
+              y={padT + chartH / 2 - 3}
+              text-anchor="start"
               font-size="9"
               fill="var(--muted)"
             >
@@ -469,17 +550,17 @@ export function StatSheet(props: {
             </text>
 
             <line
-              x1={padL}
+              x1={0}
               y1={padT + chartH}
-              x2={padL + chartW}
+              x2={chartW}
               y2={padT + chartH}
               stroke="var(--line)"
               stroke-width="1"
             />
             <text
-              x={padL - 6}
-              y={padT + chartH + 3}
-              text-anchor="end"
+              x={0}
+              y={padT + chartH - 3}
+              text-anchor="start"
               font-size="9"
               fill="var(--muted)"
             >
@@ -532,20 +613,24 @@ export function StatSheet(props: {
             )}
 
             {/* X-axis labels */}
-            {buckets.map((b, i) =>
-              b.xLabel ? (
+            {buckets.map((b, i) => {
+              if (!b.xLabel) return null;
+              const x = (i / Math.max(buckets.length - 1, 1)) * chartW;
+              const anchor =
+                i === 0 ? "start" : i === buckets.length - 1 ? "end" : "middle";
+              return (
                 <text
                   key={i}
-                  x={padL + (i / Math.max(buckets.length - 1, 1)) * chartW}
+                  x={x}
                   y={padT + chartH + 16}
-                  text-anchor="middle"
+                  text-anchor={anchor}
                   font-size="9.5"
                   fill="var(--muted)"
                 >
                   {b.xLabel}
                 </text>
-              ) : null,
-            )}
+              );
+            })}
           </svg>
 
           {/* Group legend for distinct lines in "All" view */}
