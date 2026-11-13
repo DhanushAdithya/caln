@@ -10,6 +10,18 @@ import { monthTitle, weekdayLong, weekdayShort } from "../ui/i18n";
 import { onColor } from "../state/palette";
 import type { WeekStart } from "../state/dates";
 
+function makeSplitGradient(colors: string[]): string {
+  if (colors.length === 0) return "";
+  if (colors.length === 1) return colors[0];
+  const step = 100 / colors.length;
+  const stops = colors.map((c, i) => {
+    const start = (i * step).toFixed(2);
+    const end = ((i + 1) * step).toFixed(2);
+    return `${c} ${start}%, ${c} ${end}%`;
+  });
+  return `linear-gradient(to bottom, ${stops.join(", ")})`;
+}
+
 export function MonthGrid(props: {
   year: number;
   month: number;
@@ -33,6 +45,8 @@ export function MonthGrid(props: {
   ) => void;
   onCommitMarks?: () => void;
   locked?: boolean;
+  showAll?: boolean;
+  getDayColors?: (y: number, idx: number) => string[];
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
   const isPointerDragging = useRef(false);
@@ -116,7 +130,10 @@ export function MonthGrid(props: {
         >
           <div
             class="mg-progress-fill"
-            style={{ width: `${stats.pct}%`, background: props.color }}
+            style={{
+              width: `${stats.pct}%`,
+              background: props.showAll ? "var(--text)" : props.color,
+            }}
           />
         </div>
         <div class="mg-nav">
@@ -181,7 +198,29 @@ export function MonthGrid(props: {
         })}
         {spec.cells.map((c, i) => {
           const d = dayOfMonth(c.ref.y, c.ref.idx);
-          const marked = props.isMarked(c.ref.y, c.ref.idx);
+          const dayColors =
+            props.showAll && props.getDayColors
+              ? props.getDayColors(c.ref.y, c.ref.idx)
+              : null;
+          const marked = dayColors
+            ? dayColors.length > 0
+            : props.isMarked(c.ref.y, c.ref.idx);
+          const bg =
+            dayColors && dayColors.length > 0
+              ? makeSplitGradient(dayColors)
+              : props.color;
+
+          let cellTextColor = on;
+          let cellTextShadow: string | undefined;
+          if (dayColors && dayColors.length > 0) {
+            if (dayColors.length === 1) {
+              cellTextColor = onColor(dayColors[0]);
+            } else {
+              cellTextColor = "#ffffff";
+              cellTextShadow = "0 1px 2px rgba(0, 0, 0, 0.75)";
+            }
+          }
+
           const weekend = c.wd === 0 || c.wd === 6;
           const today =
             props.highlightToday &&
@@ -206,7 +245,15 @@ export function MonthGrid(props: {
               class={cls}
               style={{
                 gridColumn: c.col + 1,
-                ...(marked ? { background: props.color, color: on } : null),
+                ...(marked
+                  ? {
+                      background: bg,
+                      color: cellTextColor,
+                      ...(cellTextShadow
+                        ? { textShadow: cellTextShadow }
+                        : null),
+                    }
+                  : null),
               }}
               aria-pressed={marked}
               aria-label={`${d} ${long[c.wd]}`}

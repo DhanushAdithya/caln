@@ -28,10 +28,26 @@ export function App() {
       return false;
     }
   });
+  const [showAll, setShowAll] = useState(false);
   const group = ui.groups[ui.sel];
   const hex = group ? PALETTE[group.color] : "var(--cell)";
   const isMarked = (y: number, idx: number) =>
     group ? ui.hasMark(ui.sel, y, idx) : false;
+  const isAnyMarked = (y: number, idx: number) => {
+    for (let i = 0; i < ui.groups.length; i++) {
+      if (ui.hasMark(i, y, idx)) return true;
+    }
+    return false;
+  };
+  const getDayColors = (y: number, idx: number): string[] => {
+    const colors: string[] = [];
+    for (let i = 0; i < ui.groups.length; i++) {
+      if (ui.hasMark(i, y, idx)) {
+        colors.push(PALETTE[ui.groups[i].color]);
+      }
+    }
+    return colors;
+  };
 
   return (
     <>
@@ -41,14 +57,33 @@ export function App() {
       />
       <main class="wrap">
         <section class="row1">
-          <GroupSelect
-            groups={ui.groups}
-            sel={ui.sel}
-            onSelect={ui.setSel}
-            onDelete={ui.deleteGroup}
-            onEdit={() => ui.setSheet("groups")}
-            onNew={() => ui.setSheet("groups")}
-          />
+          <div class="row1-left">
+            <GroupSelect
+              groups={ui.groups}
+              sel={ui.sel}
+              onSelect={(idx) => {
+                ui.setSel(idx);
+                setShowAll(false);
+              }}
+              onDelete={ui.deleteGroup}
+              onEdit={() => ui.setSheet("groups")}
+              onNew={() => ui.setSheet("groups")}
+            />
+            <button
+              type="button"
+              class={`all-btn${showAll ? " on" : ""}`}
+              onClick={() => setShowAll((v) => !v)}
+              aria-pressed={showAll}
+              aria-label={showAll ? "Show selected group" : "Show all groups"}
+              title={
+                showAll
+                  ? "Showing all groups combined (click to switch to single group)"
+                  : "Show all groups combined"
+              }
+            >
+              All
+            </button>
+          </div>
           <div class="row1-right">
             <button
               type="button"
@@ -113,10 +148,13 @@ export function App() {
           skipWeekends={ui.settings.skipWeekends}
           today={today}
           color={hex}
-          isMarked={(idx) => isMarked(ui.year, idx)}
+          isMarked={(idx) =>
+            showAll ? isAnyMarked(ui.year, idx) : isMarked(ui.year, idx)
+          }
           selectedDate={selectedDate}
           onSelectDate={(y, m, d) => setSelectedDate({ y, m, d })}
           onSelectMonth={ui.setMonth}
+          showAll={showAll}
         />
 
         <MonthTabs month={ui.month} onSet={ui.setMonth} />
@@ -130,7 +168,9 @@ export function App() {
           weekendsRed={ui.settings.weekendsRed}
           color={hex}
           today={today}
-          isMarked={isMarked}
+          isMarked={(y, idx) =>
+            showAll ? isAnyMarked(y, idx) : isMarked(y, idx)
+          }
           selectedDate={selectedDate}
           onSelectDate={(y, m, d) => setSelectedDate({ y, m, d })}
           onPrevMonth={ui.prevMonth}
@@ -141,6 +181,8 @@ export function App() {
           }
           onCommitMarks={ui.commitMarks}
           locked={locked}
+          showAll={showAll}
+          getDayColors={getDayColors}
         />
 
         <Notes

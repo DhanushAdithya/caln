@@ -1,6 +1,6 @@
 import { Dropdown } from "./Menu";
 
-const SPAN = 10;
+const SPAN = 5;
 
 export function YearSelect(props: {
   year: number;

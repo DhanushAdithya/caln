@@ -18,6 +18,7 @@ export function Matrix(props: {
   selectedDate?: { y: number; m: number; d: number };
   onSelectDate?: (y: number, m: number, d: number) => void;
   onSelectMonth?: (m: number) => void;
+  showAll?: boolean;
 }) {
   const L = matrixLayout(props.year, props.weekStart, props.skipWeekends);
   const labels = matrixMonthLabels(props.year, props.weekStart);
@@ -53,7 +54,9 @@ export function Matrix(props: {
         style={{
           gridColumn: L.colOf(idx) + 1,
           gridRow: row + 1,
-          ...(props.isMarked(idx) ? { background: props.color } : null),
+          ...(props.isMarked(idx)
+            ? { background: props.showAll ? "var(--text)" : props.color }
+            : null),
         }}
         aria-label={`${monthNamesS[m]} ${d}, ${props.year}`}
         onClick={() => {

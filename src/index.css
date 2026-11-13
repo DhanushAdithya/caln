@@ -122,6 +122,38 @@ button:focus-visible,
   gap: 8px;
   padding-block: 12px 6px;
 }
+.row1-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.all-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 11px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background 0.1s,
+    color 0.1s,
+    border-color 0.1s;
+}
+.all-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.all-btn.on {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
 .row1-right {
   display: flex;
   align-items: center;
