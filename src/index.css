@@ -1002,6 +1002,36 @@ button:focus-visible,
   height: auto;
   overflow: visible;
 }
+.stat-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+.stat-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text);
+}
+.stat-legend-item .dot {
+  width: 8px;
+  height: 8px;
+}
+.stat-legend-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stat-legend-total {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 11px;
+}
 .stat-streak-card {
   margin-top: 16px;
   padding: 12px 14px;
@@ -1039,4 +1069,41 @@ button:focus-visible,
 .stat-streak-empty {
   font-style: italic;
   opacity: 0.8;
+}
+.stat-streak-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+.stat-streak-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--line);
+}
+.stat-streak-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.stat-streak-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.stat-streak-group-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.stat-streak-group-name .dot {
+  width: 8px;
+  height: 8px;
+}
+.stat-streak-row-head .stat-streak-count {
+  font-size: 14.5px;
 }

@@ -10,6 +10,7 @@ import {
 import { monthNames, monthTitle } from "../ui/i18n";
 import { isDayMarked } from "../state/hash";
 import type { Group } from "../state/hash";
+import { PALETTE } from "../state/palette";
 
 interface StreakInfo {
   count: number;
@@ -17,26 +18,19 @@ interface StreakInfo {
   end: { y: number; m: number; d: number } | null;
 }
 
-function computeLongestStreak(
-  groups: Group[],
-  activeGroupIndex: number,
-  showAll: boolean,
+function computeGroupStreak(
+  group: Group | undefined,
   currentYear: number,
 ): StreakInfo {
-  const targetGroups = showAll
-    ? groups
-    : [groups[activeGroupIndex]].filter(Boolean);
-  if (targetGroups.length === 0) {
+  if (!group) {
     return { count: 0, start: null, end: null };
   }
 
   const yearSet = new Set<number>();
   yearSet.add(currentYear);
-  for (const g of targetGroups) {
-    if (g.years) {
-      for (const yStr of Object.keys(g.years)) {
-        yearSet.add(Number(yStr));
-      }
+  if (group.years) {
+    for (const yStr of Object.keys(group.years)) {
+      yearSet.add(Number(yStr));
     }
   }
 
@@ -54,16 +48,9 @@ function computeLongestStreak(
 
   for (let y = minYear; y <= maxYear; y++) {
     const totalDays = daysInYear(y);
+    const yearData = group.years?.[y];
     for (let idx = 0; idx < totalDays; idx++) {
-      let isMarkedOnDay = false;
-      for (const g of targetGroups) {
-        if (isDayMarked(g.years?.[y], idx)) {
-          isMarkedOnDay = true;
-          break;
-        }
-      }
-
-      if (isMarkedOnDay) {
+      if (isDayMarked(yearData, idx)) {
         current++;
         const m = monthOfYear(y, idx);
         const d = dayOfMonth(y, idx);
@@ -109,120 +96,144 @@ export function StatSheet(props: {
 
   const mNames = useMemo(() => monthNames(), []);
   const activeGroup = props.groups[props.activeGroupIndex];
-  const strokeColor = props.showAll ? "var(--text)" : props.color;
-
-  const targetGroups = props.showAll
-    ? props.groups
-    : [activeGroup].filter(Boolean);
-
-  const dayEntryCount = (y: number, idx: number): number => {
-    let count = 0;
-    for (const g of targetGroups) {
-      if (isDayMarked(g.years?.[y], idx)) {
-        count++;
-        if (!props.showAll) break;
-      }
-    }
-    return count;
-  };
 
   const chartData = useMemo(() => {
-    if (period === "daily") {
-      const len = daysInMonth(props.year, props.month);
-      const points: { label: string; xLabel: string; value: number }[] = [];
-      for (let d = 1; d <= len; d++) {
-        const idx = ymdToIdx(props.year, props.month, d);
-        const val = dayEntryCount(props.year, idx);
-        points.push({
-          label: `${mNames[props.month]} ${d}`,
-          xLabel: d === 1 || d % 5 === 0 || d === len ? String(d) : "",
-          value: val,
-        });
-      }
-      return {
-        subtitle: `${monthTitle(props.year, props.month)}`,
-        points,
-      };
+    interface Bucket {
+      label: string;
+      xLabel: string;
+      countFn: (g: Group) => number;
     }
 
-    if (period === "weekly") {
+    let subtitle = "";
+    const buckets: Bucket[] = [];
+
+    if (period === "daily") {
+      const len = daysInMonth(props.year, props.month);
+      subtitle = `${monthTitle(props.year, props.month)}`;
+      for (let d = 1; d <= len; d++) {
+        const idx = ymdToIdx(props.year, props.month, d);
+        buckets.push({
+          label: `${mNames[props.month]} ${d}`,
+          xLabel: d === 1 || d % 5 === 0 || d === len ? String(d) : "",
+          countFn: (g: Group) =>
+            isDayMarked(g.years?.[props.year], idx) ? 1 : 0,
+        });
+      }
+    } else if (period === "weekly") {
       const totalDays = daysInYear(props.year);
       const numWeeks = Math.ceil(totalDays / 7);
-      const points: { label: string; xLabel: string; value: number }[] = [];
+      subtitle = `Year ${props.year}`;
       for (let w = 0; w < numWeeks; w++) {
-        let count = 0;
         const start = w * 7;
         const end = Math.min(start + 7, totalDays);
-        for (let idx = start; idx < end; idx++) {
-          count += dayEntryCount(props.year, idx);
-        }
-        points.push({
+        buckets.push({
           label: `Week ${w + 1}`,
           xLabel:
             w === 0 || (w + 1) % 10 === 0 || w === numWeeks - 1
               ? `W${w + 1}`
               : "",
-          value: count,
+          countFn: (g: Group) => {
+            let count = 0;
+            for (let idx = start; idx < end; idx++) {
+              if (isDayMarked(g.years?.[props.year], idx)) count++;
+            }
+            return count;
+          },
         });
       }
-      return {
-        subtitle: `Year ${props.year}`,
-        points,
-      };
-    }
-
-    if (period === "monthly") {
-      const points: { label: string; xLabel: string; value: number }[] = [];
+    } else if (period === "monthly") {
+      subtitle = `Year ${props.year}`;
       for (let m = 0; m < 12; m++) {
         const start = monthStarts(props.year)[m];
         const len = daysInMonth(props.year, m);
-        let count = 0;
-        for (let d = 0; d < len; d++) {
-          count += dayEntryCount(props.year, start + d);
-        }
-        points.push({
+        buckets.push({
           label: mNames[m],
           xLabel: mNames[m],
-          value: count,
+          countFn: (g: Group) => {
+            let count = 0;
+            for (let d = 0; d < len; d++) {
+              if (isDayMarked(g.years?.[props.year], start + d)) count++;
+            }
+            return count;
+          },
         });
       }
-      return {
-        subtitle: `Year ${props.year}`,
-        points,
-      };
-    }
-
-    // yearly
-    const yearSet = new Set<number>();
-    yearSet.add(props.year);
-    yearSet.add(props.year - 1);
-    yearSet.add(props.year - 2);
-    for (const g of targetGroups) {
-      if (g.years) {
-        for (const yStr of Object.keys(g.years)) {
-          yearSet.add(Number(yStr));
+    } else {
+      // yearly
+      subtitle = "Past Years";
+      const yearSet = new Set<number>();
+      yearSet.add(props.year);
+      yearSet.add(props.year - 1);
+      yearSet.add(props.year - 2);
+      const relevant = props.showAll
+        ? props.groups
+        : [activeGroup].filter(Boolean);
+      for (const g of relevant) {
+        if (g.years) {
+          for (const yStr of Object.keys(g.years)) {
+            yearSet.add(Number(yStr));
+          }
         }
       }
-    }
-    const sorted = Array.from(yearSet)
-      .sort((a, b) => a - b)
-      .slice(-6);
-    const points: { label: string; xLabel: string; value: number }[] = [];
-    for (const y of sorted) {
-      let count = 0;
-      const len = daysInYear(y);
-      for (let idx = 0; idx < len; idx++) {
-        count += dayEntryCount(y, idx);
+      const sorted = Array.from(yearSet)
+        .sort((a, b) => a - b)
+        .slice(-6);
+      for (const y of sorted) {
+        const len = daysInYear(y);
+        buckets.push({
+          label: String(y),
+          xLabel: String(y),
+          countFn: (g: Group) => {
+            let count = 0;
+            for (let idx = 0; idx < len; idx++) {
+              if (isDayMarked(g.years?.[y], idx)) count++;
+            }
+            return count;
+          },
+        });
       }
-      points.push({
-        label: String(y),
-        xLabel: String(y),
-        value: count,
-      });
     }
+
+    const targetList = props.showAll
+      ? props.groups.map((g) => ({
+          id: g.id,
+          name: g.name,
+          color: PALETTE[g.color] ?? PALETTE[0],
+          group: g,
+        }))
+      : activeGroup
+        ? [
+            {
+              id: activeGroup.id,
+              name: activeGroup.name,
+              color: props.color,
+              group: activeGroup,
+            },
+          ]
+        : [];
+
+    const series = targetList.map((t) => {
+      const values = buckets.map((b) => b.countFn(t.group));
+      const total = values.reduce((acc, v) => acc + v, 0);
+      return {
+        id: t.id,
+        name: t.name,
+        color: t.color,
+        values,
+        total,
+      };
+    });
+
+    const allValues = series.flatMap((s) => s.values);
+    const maxVal = Math.max(...allValues, 1);
+    const midVal = Math.ceil(maxVal / 2);
+
     return {
-      subtitle: "Past Years",
-      points,
+      subtitle,
+      buckets,
+      series,
+      maxVal,
+      midVal,
     };
   }, [
     period,
@@ -231,17 +242,24 @@ export function StatSheet(props: {
     props.showAll,
     props.groups,
     props.activeGroupIndex,
+    props.color,
+    mNames,
+    activeGroup,
   ]);
 
-  const streak = useMemo(
+  const singleStreak = useMemo(
+    () => computeGroupStreak(activeGroup, props.year),
+    [activeGroup, props.year],
+  );
+
+  const allStreaks = useMemo(
     () =>
-      computeLongestStreak(
-        props.groups,
-        props.activeGroupIndex,
-        props.showAll,
-        props.year,
-      ),
-    [props.groups, props.activeGroupIndex, props.showAll, props.year],
+      props.groups.map((g) => ({
+        group: g,
+        color: PALETTE[g.color] ?? PALETTE[0],
+        streak: computeGroupStreak(g, props.year),
+      })),
+    [props.groups, props.year],
   );
 
   const formatDate = (d: { y: number; m: number; d: number } | null) => {
@@ -263,25 +281,42 @@ export function StatSheet(props: {
   const chartW = svgWidth - padL - padR;
   const chartH = svgHeight - padT - padB;
 
-  const points = chartData.points;
-  const totalEntries = points.reduce((acc, p) => acc + p.value, 0);
-  const maxVal = Math.max(...points.map((p) => p.value), 1);
-  const midVal = Math.ceil(maxVal / 2);
+  const { buckets, series, maxVal, midVal, subtitle } = chartData;
+  const grandTotal = series.reduce((acc, s) => acc + s.total, 0);
 
-  const coordinates = points.map((p, i) => {
-    const x = padL + (i / Math.max(points.length - 1, 1)) * chartW;
-    const y = padT + chartH - (p.value / maxVal) * chartH;
-    return { x, y, ...p };
-  });
+  const seriesWithGeometry = useMemo(() => {
+    return series.map((s) => {
+      const coordinates = s.values.map((val, i) => {
+        const x = padL + (i / Math.max(buckets.length - 1, 1)) * chartW;
+        const y = padT + chartH - (val / maxVal) * chartH;
+        return {
+          x,
+          y,
+          value: val,
+          label: buckets[i].label,
+        };
+      });
 
-  const linePath = coordinates
-    .map((c, i) => `${i === 0 ? "M" : "L"} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`)
-    .join(" ");
+      const linePath = coordinates
+        .map(
+          (c, i) =>
+            `${i === 0 ? "M" : "L"} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`,
+        )
+        .join(" ");
 
-  const areaPath =
-    coordinates.length > 0
-      ? `${linePath} L ${coordinates[coordinates.length - 1].x.toFixed(1)} ${padT + chartH} L ${coordinates[0].x.toFixed(1)} ${padT + chartH} Z`
-      : "";
+      const areaPath =
+        coordinates.length > 0
+          ? `${linePath} L ${coordinates[coordinates.length - 1].x.toFixed(1)} ${padT + chartH} L ${coordinates[0].x.toFixed(1)} ${padT + chartH} Z`
+          : null;
+
+      return {
+        ...s,
+        coordinates,
+        linePath,
+        areaPath,
+      };
+    });
+  }, [series, buckets, maxVal, chartW, chartH]);
 
   return (
     <>
@@ -358,31 +393,40 @@ export function StatSheet(props: {
         {/* Line Chart Section */}
         <div class="stat-chart-wrap">
           <div class="stat-summary">
-            <span>{chartData.subtitle}</span>
+            <span>{subtitle}</span>
             <span>
-              Total: <b>{totalEntries}</b>{" "}
-              {totalEntries === 1 ? "entry" : "entries"}
+              Total: <b>{grandTotal}</b>{" "}
+              {grandTotal === 1 ? "entry" : "entries"}
             </span>
           </div>
 
           <svg
             viewBox={`0 0 ${svgWidth} ${svgHeight}`}
             class="stat-chart-svg"
-            aria-label={`Entry chart for ${chartData.subtitle}`}
+            aria-label={`Entry chart for ${subtitle}`}
           >
             <defs>
-              <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="0%"
-                  stop-color={strokeColor}
-                  stop-opacity="0.32"
-                />
-                <stop
-                  offset="100%"
-                  stop-color={strokeColor}
-                  stop-opacity="0.02"
-                />
-              </linearGradient>
+              {seriesWithGeometry.map((s) => (
+                <linearGradient
+                  id={`chartGrad-${s.id}`}
+                  key={s.id}
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop
+                    offset="0%"
+                    stop-color={s.color}
+                    stop-opacity={props.showAll ? "0.2" : "0.32"}
+                  />
+                  <stop
+                    offset="100%"
+                    stop-color={s.color}
+                    stop-opacity="0.02"
+                  />
+                </linearGradient>
+              ))}
             </defs>
 
             {/* Grid horizontal lines */}
@@ -442,66 +486,137 @@ export function StatSheet(props: {
               0
             </text>
 
-            {/* Area gradient under line */}
-            {areaPath && <path d={areaPath} fill="url(#chartGrad)" />}
+            {/* Area gradients under curves */}
+            {seriesWithGeometry.map(
+              (s) =>
+                s.areaPath && (
+                  <path
+                    key={`area-${s.id}`}
+                    d={s.areaPath}
+                    fill={`url(#chartGrad-${s.id})`}
+                  />
+                ),
+            )}
 
-            {/* Main line path */}
-            {linePath && (
+            {/* Distinct line paths for each group */}
+            {seriesWithGeometry.map((s) => (
               <path
-                d={linePath}
+                key={s.id}
+                d={s.linePath}
                 fill="none"
-                stroke={strokeColor}
+                stroke={s.color}
                 stroke-width="2.2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
-              />
+              >
+                <title>{`${s.name}: ${s.total} entries`}</title>
+              </path>
+            ))}
+
+            {/* Data Dots for each group */}
+            {seriesWithGeometry.map((s) =>
+              s.coordinates.map((c, i) => {
+                if (props.showAll && c.value === 0) return null;
+                return (
+                  <circle
+                    key={`${s.id}-${i}`}
+                    cx={c.x}
+                    cy={c.y}
+                    r={buckets.length > 35 ? 2 : 3}
+                    fill={s.color}
+                  >
+                    <title>{`${s.name} (${c.label}): ${c.value} entries`}</title>
+                  </circle>
+                );
+              }),
             )}
 
-            {/* Data Dots and X-axis labels */}
-            {coordinates.map((c, i) => (
-              <g key={i}>
-                <circle
-                  cx={c.x}
-                  cy={c.y}
-                  r={coordinates.length > 35 ? 2 : 3}
-                  fill={strokeColor}
+            {/* X-axis labels */}
+            {buckets.map((b, i) =>
+              b.xLabel ? (
+                <text
+                  key={i}
+                  x={padL + (i / Math.max(buckets.length - 1, 1)) * chartW}
+                  y={padT + chartH + 16}
+                  text-anchor="middle"
+                  font-size="9.5"
+                  fill="var(--muted)"
                 >
-                  <title>{`${c.label}: ${c.value} entries`}</title>
-                </circle>
-                {c.xLabel && (
-                  <text
-                    x={c.x}
-                    y={padT + chartH + 16}
-                    text-anchor="middle"
-                    font-size="9.5"
-                    fill="var(--muted)"
-                  >
-                    {c.xLabel}
-                  </text>
-                )}
-              </g>
-            ))}
+                  {b.xLabel}
+                </text>
+              ) : null,
+            )}
           </svg>
+
+          {/* Group legend for distinct lines in "All" view */}
+          {props.showAll && seriesWithGeometry.length > 1 && (
+            <div class="stat-legend">
+              {seriesWithGeometry.map((s) => (
+                <div key={s.id} class="stat-legend-item">
+                  <span class="dot" style={{ background: s.color }} />
+                  <span class="stat-legend-name">{s.name}</span>
+                  <span class="stat-legend-total">({s.total})</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Longest Streak Info */}
         <div class="stat-streak-card">
           <div class="stat-streak-head">
-            <span class="stat-streak-title">Longest Streak</span>
-            <span class="stat-streak-count">
-              {streak.count} {streak.count === 1 ? "day" : "days"}
+            <span class="stat-streak-title">
+              {props.showAll ? "Longest Streaks" : "Longest Streak"}
             </span>
-          </div>
-          <div class="stat-streak-dates">
-            {streak.count > 0 && streak.start && streak.end ? (
-              <span>
-                From <b>{formatDate(streak.start)}</b> to{" "}
-                <b>{formatDate(streak.end)}</b>
+            {!props.showAll && (
+              <span class="stat-streak-count">
+                {singleStreak.count} {singleStreak.count === 1 ? "day" : "days"}
               </span>
-            ) : (
-              <span class="stat-streak-empty">No marked streaks yet</span>
             )}
           </div>
+
+          {props.showAll ? (
+            <div class="stat-streak-list">
+              {allStreaks.map(({ group, color, streak }) => (
+                <div key={group.id} class="stat-streak-row">
+                  <div class="stat-streak-row-head">
+                    <span class="stat-streak-group-name">
+                      <span class="dot" style={{ background: color }} />
+                      {group.name}
+                    </span>
+                    <span class="stat-streak-count">
+                      {streak.count} {streak.count === 1 ? "day" : "days"}
+                    </span>
+                  </div>
+                  <div class="stat-streak-dates">
+                    {streak.count > 0 && streak.start && streak.end ? (
+                      <span>
+                        From <b>{formatDate(streak.start)}</b> to{" "}
+                        <b>{formatDate(streak.end)}</b>
+                      </span>
+                    ) : (
+                      <span class="stat-streak-empty">
+                        No marked streaks yet
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div class="stat-streak-dates">
+              {singleStreak.count > 0 &&
+              singleStreak.start &&
+              singleStreak.end ? (
+                <span>
+                  From <b>{formatDate(singleStreak.start)}</b> to{" "}
+                  <b>{formatDate(singleStreak.end)}</b>
+                </span>
+              ) : (
+                <span class="stat-streak-empty">No marked streaks yet</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>
