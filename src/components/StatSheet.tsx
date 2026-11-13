@@ -309,9 +309,11 @@ export function StatSheet(props: {
   // SVG Chart Geometry
   const svgWidth = 460;
   const svgHeight = 160;
+  const padL = 34;
+  const padR = 16;
   const padT = 16;
   const padB = 26;
-  const chartW = svgWidth;
+  const chartW = svgWidth - padL - padR;
   const chartH = svgHeight - padT - padB;
 
   const { buckets, series, maxVal, midVal, subtitle } = chartData;
@@ -320,7 +322,7 @@ export function StatSheet(props: {
   const seriesWithGeometry = useMemo(() => {
     return series.map((s) => {
       const coordinates = s.values.map((val, i) => {
-        const x = (i / Math.max(buckets.length - 1, 1)) * chartW;
+        const x = padL + (i / Math.max(buckets.length - 1, 1)) * chartW;
         const y = padT + chartH - (val / maxVal) * chartH;
         return {
           x,
@@ -512,18 +514,18 @@ export function StatSheet(props: {
 
             {/* Grid horizontal lines */}
             <line
-              x1={0}
+              x1={padL}
               y1={padT}
-              x2={chartW}
+              x2={padL + chartW}
               y2={padT}
               stroke="var(--line)"
               stroke-width="1"
               stroke-dasharray="3,3"
             />
             <text
-              x={0}
-              y={padT - 3}
-              text-anchor="start"
+              x={padL - 6}
+              y={padT + 3}
+              text-anchor="end"
               font-size="9"
               fill="var(--muted)"
             >
@@ -531,18 +533,18 @@ export function StatSheet(props: {
             </text>
 
             <line
-              x1={0}
+              x1={padL}
               y1={padT + chartH / 2}
-              x2={chartW}
+              x2={padL + chartW}
               y2={padT + chartH / 2}
               stroke="var(--line)"
               stroke-width="1"
               stroke-dasharray="3,3"
             />
             <text
-              x={0}
-              y={padT + chartH / 2 - 3}
-              text-anchor="start"
+              x={padL - 6}
+              y={padT + chartH / 2 + 3}
+              text-anchor="end"
               font-size="9"
               fill="var(--muted)"
             >
@@ -550,17 +552,17 @@ export function StatSheet(props: {
             </text>
 
             <line
-              x1={0}
+              x1={padL}
               y1={padT + chartH}
-              x2={chartW}
+              x2={padL + chartW}
               y2={padT + chartH}
               stroke="var(--line)"
               stroke-width="1"
             />
             <text
-              x={0}
-              y={padT + chartH - 3}
-              text-anchor="start"
+              x={padL - 6}
+              y={padT + chartH + 3}
+              text-anchor="end"
               font-size="9"
               fill="var(--muted)"
             >
@@ -613,24 +615,20 @@ export function StatSheet(props: {
             )}
 
             {/* X-axis labels */}
-            {buckets.map((b, i) => {
-              if (!b.xLabel) return null;
-              const x = (i / Math.max(buckets.length - 1, 1)) * chartW;
-              const anchor =
-                i === 0 ? "start" : i === buckets.length - 1 ? "end" : "middle";
-              return (
+            {buckets.map((b, i) =>
+              b.xLabel ? (
                 <text
                   key={i}
-                  x={x}
+                  x={padL + (i / Math.max(buckets.length - 1, 1)) * chartW}
                   y={padT + chartH + 16}
-                  text-anchor={anchor}
+                  text-anchor="middle"
                   font-size="9.5"
                   fill="var(--muted)"
                 >
                   {b.xLabel}
                 </text>
-              );
-            })}
+              ) : null,
+            )}
           </svg>
 
           {/* Group legend for distinct lines in "All" view */}
