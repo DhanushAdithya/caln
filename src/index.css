@@ -396,38 +396,30 @@ button:focus-visible,
 .mg-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
   margin-bottom: 10px;
-}
-.mg-head-left {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 .mg-title {
   margin: 0;
   font-size: 16.5px;
   font-weight: 750;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.mg-stat {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
+.mg-progress {
+  flex: 1;
+  min-width: 24px;
+  height: 6px;
+  background: var(--cell);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
 }
-.mg-stat-pct {
-  color: var(--text);
-  font-weight: 750;
-}
-.mg-stat-count {
-  color: var(--muted);
-  font-size: 12.5px;
+.mg-progress-fill {
+  height: 100%;
+  border-radius: var(--radius);
+  transition: width 0.15s ease-out;
 }
 .mg-nav {
   display: flex;

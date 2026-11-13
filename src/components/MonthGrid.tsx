@@ -103,14 +103,20 @@ export function MonthGrid(props: {
   return (
     <section class="mg-sec" aria-label={monthTitle(props.year, props.month)}>
       <div class="mg-head">
-        <div class="mg-head-left">
-          <h2 class="mg-title">{monthTitle(props.year, props.month)}</h2>
-          <span class="mg-stat">
-            <span class="mg-stat-pct">{stats.pct}%</span>
-            <span class="mg-stat-count">
-              ({stats.selected}/{stats.total})
-            </span>
-          </span>
+        <h2 class="mg-title">{monthTitle(props.year, props.month)}</h2>
+        <div
+          class="mg-progress"
+          role="progressbar"
+          aria-valuenow={stats.pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`${stats.pct}% marked (${stats.selected} of ${stats.total} days)`}
+          title={`${stats.pct}% (${stats.selected}/${stats.total})`}
+        >
+          <div
+            class="mg-progress-fill"
+            style={{ width: `${stats.pct}%`, background: props.color }}
+          />
         </div>
         <div class="mg-nav">
           <button
