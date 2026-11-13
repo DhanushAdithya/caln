@@ -22,6 +22,8 @@ export function MonthGrid(props: {
   isMarked: (y: number, idx: number) => boolean;
   selectedDate?: { y: number; m: number; d: number };
   onSelectDate?: (y: number, m: number, d: number) => void;
+  onPrevMonth?: () => void;
+  onNextMonth?: () => void;
   onToggle: (y: number, idx: number) => void;
   onSetMark?: (
     y: number,
@@ -101,13 +103,61 @@ export function MonthGrid(props: {
   return (
     <section class="mg-sec" aria-label={monthTitle(props.year, props.month)}>
       <div class="mg-head">
-        <h2 class="mg-title">{monthTitle(props.year, props.month)}</h2>
-        <span class="mg-stat">
-          <span class="mg-stat-pct">{stats.pct}%</span>
-          <span class="mg-stat-count">
-            ({stats.selected}/{stats.total})
+        <div class="mg-head-left">
+          <h2 class="mg-title">{monthTitle(props.year, props.month)}</h2>
+          <span class="mg-stat">
+            <span class="mg-stat-pct">{stats.pct}%</span>
+            <span class="mg-stat-count">
+              ({stats.selected}/{stats.total})
+            </span>
           </span>
-        </span>
+        </div>
+        <div class="mg-nav">
+          <button
+            type="button"
+            class="mg-nav-btn"
+            onClick={props.onPrevMonth}
+            aria-label="Previous month"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M10 3.5L5.5 8l4.5 4.5"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="mg-nav-btn"
+            onClick={props.onNextMonth}
+            aria-label="Next month"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M6 3.5L10.5 8 6 12.5"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
       <div
         ref={gridRef}

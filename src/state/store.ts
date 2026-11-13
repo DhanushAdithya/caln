@@ -35,6 +35,8 @@ export interface StoreView {
   setYear: (y: number) => void;
   month: number;
   setMonth: (m: number) => void;
+  prevMonth: () => void;
+  nextMonth: () => void;
   hasMark: (groupIndex: number, year: number, dayIdx: number) => boolean;
   toggle: (groupIndex: number, year: number, dayIdx: number) => void;
   setMark: (
@@ -353,6 +355,28 @@ function setMonth(month: number): void {
   }
 }
 
+function prevMonth(): void {
+  if (state.month > 0) {
+    updateState({ ...state, month: state.month - 1 }, { pushHash: false });
+  } else {
+    updateState(
+      { ...state, year: state.year - 1, month: 11 },
+      { pushHash: false },
+    );
+  }
+}
+
+function nextMonth(): void {
+  if (state.month < 11) {
+    updateState({ ...state, month: state.month + 1 }, { pushHash: false });
+  } else {
+    updateState(
+      { ...state, year: state.year + 1, month: 0 },
+      { pushHash: false },
+    );
+  }
+}
+
 function jumpToday(): void {
   const today = todayRef();
   if (state.year !== today.y || state.month !== today.m) {
@@ -548,6 +572,8 @@ export function useStore(): StoreView {
     setYear,
     month: state.month,
     setMonth,
+    prevMonth,
+    nextMonth,
     hasMark: (groupIndex, y, idx) => {
       const g = state.groups[groupIndex];
       return isDayMarked(g?.years[y], idx);

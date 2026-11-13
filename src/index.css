@@ -395,9 +395,16 @@ button:focus-visible,
 }
 .mg-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 10px;
+}
+.mg-head-left {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .mg-title {
   margin: 0;
@@ -408,7 +415,7 @@ button:focus-visible,
 .mg-stat {
   display: flex;
   align-items: baseline;
-  gap: 5px;
+  gap: 4px;
   font-size: 13px;
   font-weight: 600;
   color: var(--muted);
@@ -421,6 +428,32 @@ button:focus-visible,
 .mg-stat-count {
   color: var(--muted);
   font-size: 12.5px;
+}
+.mg-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.mg-nav-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background 0.1s,
+    color 0.1s,
+    border-color 0.1s;
+}
+.mg-nav-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+  border-color: var(--text);
 }
 .mg {
   display: grid;

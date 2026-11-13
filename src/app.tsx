@@ -85,6 +85,8 @@ export function App() {
           isMarked={isMarked}
           selectedDate={selectedDate}
           onSelectDate={(y, m, d) => setSelectedDate({ y, m, d })}
+          onPrevMonth={ui.prevMonth}
+          onNextMonth={ui.nextMonth}
           onToggle={(y, idx) => ui.toggle(ui.sel, y, idx)}
           onSetMark={(y, idx, val, push) =>
             ui.setMark(ui.sel, y, idx, val, push)
