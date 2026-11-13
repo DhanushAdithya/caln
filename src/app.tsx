@@ -122,13 +122,15 @@ export function App() {
                 });
               }}
               aria-label={
-                locked ? "Unlock calendar entries" : "Lock calendar entries"
+                locked
+                  ? "Unlock calendar entries and notes"
+                  : "Lock calendar entries and notes"
               }
               aria-pressed={locked}
               title={
                 locked
-                  ? "Calendar locked (read-only entries, notes enabled)"
-                  : "Calendar unlocked (click to lock entries)"
+                  ? "Calendar locked (read-only entries and notes)"
+                  : "Calendar unlocked (click to lock entries and notes)"
               }
             >
               <svg
@@ -213,6 +215,7 @@ export function App() {
           year={selectedDate.y}
           month={selectedDate.m}
           day={selectedDate.d}
+          locked={locked}
         />
       </main>
 

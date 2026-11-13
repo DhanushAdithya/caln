@@ -3,7 +3,12 @@ import { idbGet, idbSet } from "../state/db";
 
 export type NotesMap = Record<string, string>;
 
-export function Notes(props: { year: number; month: number; day: number }) {
+export function Notes(props: {
+  year: number;
+  month: number;
+  day: number;
+  locked?: boolean;
+}) {
   const [notes, setNotes] = useState<NotesMap>({});
   const saveTimer = useRef<number | null>(null);
   const notesRef = useRef<NotesMap>({});
@@ -47,6 +52,7 @@ export function Notes(props: { year: number; month: number; day: number }) {
   const currentText = notes[dateKey] ?? "";
 
   const handleChange = (val: string) => {
+    if (props.locked) return;
     const next = { ...notes, [dateKey]: val };
     setNotes(next);
     scheduleSave(next);
@@ -63,12 +69,25 @@ export function Notes(props: { year: number; month: number; day: number }) {
     <section class="notes-sec" aria-label={`Notes for ${formattedDate}`}>
       <div class="notes-head">
         <span class="notes-title">Notes — {formattedDate}</span>
+        {props.locked && (
+          <span
+            class="notes-locked-badge"
+            title="Calendar and notes are locked"
+          >
+            Locked
+          </span>
+        )}
       </div>
       <textarea
         class="notes-input"
         value={currentText}
-        placeholder={`Add note for ${formattedDate}...`}
+        placeholder={
+          props.locked ? "Notes locked" : `Add note for ${formattedDate}...`
+        }
         rows={3}
+        disabled={props.locked}
+        readOnly={props.locked}
+        aria-disabled={props.locked}
         onInput={(e) => handleChange((e.target as HTMLTextAreaElement).value)}
       />
     </section>
