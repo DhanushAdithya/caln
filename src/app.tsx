@@ -205,8 +205,11 @@ export function App() {
       <SettingsSheet
         open={ui.sheet === "settings"}
         settings={ui.settings}
+        notes={ui.notes}
+        groups={ui.groups}
         onSet={ui.setSetting}
         onClose={() => ui.setSheet(null)}
+        onDeleteAllData={ui.deleteAllData}
         canInstall={ui.canInstall}
         onInstall={ui.installApp}
         isSharedTemp={ui.isSharedTemp}

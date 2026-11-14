@@ -15,7 +15,7 @@ import {
   type Settings,
   type ThemeName,
 } from "./settings";
-import { idbGet, idbSet } from "./db";
+import { idbClear, idbGet, idbSet } from "./db";
 import { todayRef } from "./dates";
 
 export type Sheet = null | "settings" | "groups" | "stats" | "notes";
@@ -74,6 +74,7 @@ export interface StoreView {
   isSharedTemp: boolean;
   saveSharedToLocal: () => void;
   discardShared: () => Promise<void>;
+  deleteAllData: () => Promise<void>;
 }
 
 function createDefaultState(): State {
@@ -728,6 +729,46 @@ if (typeof window !== "undefined") {
   });
 }
 
+async function deleteAllData(): Promise<void> {
+  if (idbTimer !== null) {
+    window.clearTimeout(idbTimer);
+    idbTimer = null;
+  }
+  if (notesTimer !== null) {
+    window.clearTimeout(notesTimer);
+    notesTimer = null;
+  }
+
+  await idbClear();
+
+  try {
+    localStorage.removeItem("caln_locked");
+  } catch {}
+
+  if (typeof window !== "undefined" && window.location.hash) {
+    try {
+      history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    } catch {}
+  }
+
+  state = createDefaultState();
+  settings = { ...DEFAULT_SETTINGS };
+  notes = {};
+  applyTheme(settings.theme);
+  currentSheet = null;
+
+  await idbSet("state", state);
+  await idbSet("settings", settings);
+  await idbSet("notes", notes);
+
+  notify();
+  showToast("All data deleted");
+}
+
 function setSheet(s: Sheet): void {
   currentSheet = s;
   notify();
@@ -782,5 +823,6 @@ export function useStore(): StoreView {
     isSharedTemp,
     saveSharedToLocal,
     discardShared,
+    deleteAllData,
   };
 }

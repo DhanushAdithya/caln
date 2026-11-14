@@ -73,3 +73,19 @@ export async function idbSet<T>(key: string, value: T): Promise<boolean> {
     return false;
   }
 }
+
+export async function idbClear(): Promise<boolean> {
+  try {
+    const db = await openDb();
+    if (!db) return false;
+    return new Promise<boolean>((resolve) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.clear();
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => resolve(false);
+    });
+  } catch {
+    return false;
+  }
+}

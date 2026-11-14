@@ -568,7 +568,101 @@ button:focus-visible,
 .sh-row:last-of-type {
   border-bottom: 0;
 }
-
+.sh-storage-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--line);
+}
+.sh-storage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+}
+.sh-storage-title {
+  color: var(--text);
+}
+.sh-storage-total {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.sh-storage-bar {
+  display: flex;
+  height: 8px;
+  background: var(--cell);
+  overflow: hidden;
+  width: 100%;
+}
+.sh-storage-seg {
+  height: 100%;
+  transition: width 0.2s ease;
+}
+.sh-seg-app {
+  background: #8b5cf6;
+}
+.sh-seg-notes {
+  background: #3b82f6;
+}
+.sh-seg-entries {
+  background: #10b981;
+}
+.sh-seg-settings {
+  background: #f59e0b;
+}
+.sh-storage-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--muted);
+  padding-top: 2px;
+}
+.sh-storage-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+.sh-storage-item:hover {
+  opacity: 0.8;
+}
+.sh-storage-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  box-sizing: border-box;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.sh-dot-off {
+  background: transparent !important;
+  border: 1px solid var(--line);
+}
+.sh-dot-app {
+  background: #8b5cf6;
+}
+.sh-dot-notes {
+  background: #3b82f6;
+}
+.sh-dot-entries {
+  background: #10b981;
+}
+.sh-dot-settings {
+  background: #f59e0b;
+}
+.sh-storage-label {
+  color: var(--text);
+  font-weight: 500;
+}
+.sh-storage-val {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
 .sh-install-btn {
   padding: 5px 14px;
   background: var(--text);
@@ -578,6 +672,38 @@ button:focus-visible,
 }
 .sh-install-btn:hover {
   opacity: 0.9;
+}
+.sh-danger-btn {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+.sh-danger-btn:hover {
+  background: #ef4444;
+  color: #fff;
+  opacity: 1;
+}
+.sh-btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+.sh-btn-secondary:hover {
+  background: var(--cell-dim);
+  opacity: 1;
+}
+.sh-delete-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.sh-delete-warn {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text);
 }
 
 .seg {
