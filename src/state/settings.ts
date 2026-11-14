@@ -9,6 +9,7 @@ export interface Settings {
   theme: ThemeName;
   weekendsRed: boolean;
   locked: boolean;
+  hideMatrix: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -18,6 +19,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   weekendsRed: true,
   locked: false,
+  hideMatrix: false,
 };
 
 export function normalizeSettings(
@@ -55,5 +57,9 @@ export function normalizeSettings(
               return DEFAULT_SETTINGS.locked;
             }
           })(),
+    hideMatrix:
+      typeof raw.hideMatrix === "boolean"
+        ? raw.hideMatrix
+        : DEFAULT_SETTINGS.hideMatrix,
   };
 }

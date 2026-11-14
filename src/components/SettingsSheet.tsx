@@ -143,6 +143,15 @@ export function SettingsSheet(props: {
             />
           </div>
 
+          <div class="sh-row">
+            <span>Hide calendar matrix</span>
+            <Switch
+              checked={s.hideMatrix}
+              label="Hide calendar matrix"
+              onToggle={() => props.onSet("hideMatrix", !s.hideMatrix)}
+            />
+          </div>
+
           {props.isSharedTemp && (
             <div class="sh-row">
               <span>Shared calendar (temp)</span>
