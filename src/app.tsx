@@ -149,20 +149,22 @@ export function App() {
           </div>
         </section>
 
-        <Matrix
-          year={ui.year}
-          weekStart={ui.settings.weekStart}
-          skipWeekends={ui.settings.skipWeekends}
-          today={today}
-          color={hex}
-          isMarked={(idx) =>
-            showAll ? isAnyMarked(ui.year, idx) : isMarked(ui.year, idx)
-          }
-          selectedDate={selectedDate}
-          onSelectDate={(y, m, d) => setSelectedDate({ y, m, d })}
-          onSelectMonth={ui.setMonth}
-          showAll={showAll}
-        />
+        {!ui.settings.hideMatrix && (
+          <Matrix
+            year={ui.year}
+            weekStart={ui.settings.weekStart}
+            skipWeekends={ui.settings.skipWeekends}
+            today={today}
+            color={hex}
+            isMarked={(idx) =>
+              showAll ? isAnyMarked(ui.year, idx) : isMarked(ui.year, idx)
+            }
+            selectedDate={selectedDate}
+            onSelectDate={(y, m, d) => setSelectedDate({ y, m, d })}
+            onSelectMonth={ui.setMonth}
+            showAll={showAll}
+          />
+        )}
 
         <MonthTabs month={ui.month} onSet={ui.setMonth} />
 
@@ -238,6 +240,7 @@ export function App() {
         open={ui.sheet === "notes"}
         notes={ui.notes}
         onClose={() => ui.setSheet(null)}
+        onDeleteNote={ui.deleteNote}
         onSelectDate={(y, m, d) => {
           ui.setYear(y);
           ui.setMonth(m);

@@ -54,6 +54,7 @@ export interface StoreView {
   setSheet: (s: Sheet) => void;
   notes: Record<string, string>;
   setNote: (dateKey: string, text: string) => void;
+  deleteNote: (dateKey: string) => void;
   jumpToday: () => void;
   createGroup: (name: string, color?: number) => number;
   updateGroup: (id: number, patch: { name?: string; color?: number }) => void;
@@ -706,6 +707,17 @@ function setNote(dateKey: string, text: string): void {
   }
 }
 
+function deleteNote(dateKey: string): void {
+  const prevText = notes[dateKey];
+  setNote(dateKey, "");
+  if (prevText) {
+    showToast("Note deleted", {
+      label: "Undo",
+      onClick: () => setNote(dateKey, prevText),
+    });
+  }
+}
+
 if (typeof window !== "undefined") {
   window.addEventListener("beforeunload", () => {
     if (notesTimer !== null) {
@@ -754,6 +766,7 @@ export function useStore(): StoreView {
     setSheet,
     notes,
     setNote,
+    deleteNote,
     jumpToday,
     createGroup,
     updateGroup,

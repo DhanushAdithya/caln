@@ -32,6 +32,7 @@ export function NotesSheet(props: {
   notes: Record<string, string>;
   onClose: () => void;
   onSelectDate: (y: number, m: number, d: number) => void;
+  onDeleteNote: (key: string) => void;
 }) {
   if (!props.open) return null;
 
@@ -144,7 +145,33 @@ export function NotesSheet(props: {
                     }
                   }}
                 >
-                  <div class="notes-item-date">{item.formattedDate}</div>
+                  <div class="notes-item-head">
+                    <span class="notes-item-date">{item.formattedDate}</span>
+                    <button
+                      type="button"
+                      class="sh-icon-act sh-del"
+                      title="Delete note"
+                      aria-label={`Delete note for ${item.formattedDate}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        props.onDeleteNote(item.key);
+                      }}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
                   <div class="notes-item-snip">{item.text}</div>
                 </div>
               ))
