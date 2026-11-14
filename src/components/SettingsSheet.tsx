@@ -79,118 +79,120 @@ export function SettingsSheet(props: {
           </button>
         </div>
 
-        <div class="sh-row">
-          <span>Theme</span>
-          <Seg
-            label="Theme"
-            value={s.theme}
-            onPick={(v) => props.onSet("theme", v as ThemeName)}
-            options={[
-              { v: "system", label: "System" },
-              { v: "light", label: "Light" },
-              { v: "dark", label: "Dark" },
-            ]}
-          />
-        </div>
-
-        <div class="sh-row">
-          <span>Start of week</span>
-          <Seg
-            label="Start of week"
-            value={s.weekStart}
-            onPick={(v) => props.onSet("weekStart", v as 0 | 1)}
-            options={[
-              { v: 0, label: "Sun" },
-              { v: 1, label: "Mon" },
-            ]}
-          />
-        </div>
-
-        <div class="sh-row">
-          <span>Skip weekends</span>
-          <Switch
-            checked={s.skipWeekends}
-            label="Skip weekends"
-            onToggle={() => props.onSet("skipWeekends", !s.skipWeekends)}
-          />
-        </div>
-
-        <div class="sh-row">
-          <span>Mark weekends in red</span>
-          <Switch
-            checked={s.weekendsRed}
-            label="Mark weekends in red"
-            onToggle={() => props.onSet("weekendsRed", !s.weekendsRed)}
-          />
-        </div>
-
-        <div class="sh-row">
-          <span>Highlight today</span>
-          <Switch
-            checked={s.highlightToday}
-            label="Highlight today"
-            onToggle={() => props.onSet("highlightToday", !s.highlightToday)}
-          />
-        </div>
-
-        <div class="sh-row">
-          <span>Lock calendar</span>
-          <Switch
-            checked={s.locked}
-            label="Lock calendar (read-only)"
-            onToggle={() => props.onSet("locked", !s.locked)}
-          />
-        </div>
-
-        {props.isSharedTemp && (
+        <div class="sh-body">
           <div class="sh-row">
-            <span>Shared calendar (temp)</span>
-            <div style={{ display: "flex", gap: "6px" }}>
-              {props.onDiscardShared && (
-                <button
-                  type="button"
-                  class="sh-install-btn"
-                  onClick={() => {
-                    props.onDiscardShared?.();
-                    props.onClose();
-                  }}
-                >
-                  Discard
-                </button>
-              )}
-              {props.onSaveShared && (
-                <button
-                  type="button"
-                  class="sh-install-btn"
-                  style={{
-                    background: "var(--text)",
-                    color: "var(--bg)",
-                    borderColor: "var(--text)",
-                  }}
-                  onClick={() => {
-                    props.onSaveShared?.();
-                    props.onClose();
-                  }}
-                >
-                  Add to calendar
-                </button>
-              )}
-            </div>
+            <span>Theme</span>
+            <Seg
+              label="Theme"
+              value={s.theme}
+              onPick={(v) => props.onSet("theme", v as ThemeName)}
+              options={[
+                { v: "system", label: "System" },
+                { v: "light", label: "Light" },
+                { v: "dark", label: "Dark" },
+              ]}
+            />
           </div>
-        )}
 
-        {props.canInstall && props.onInstall && (
-          <div class="sh-row sh-last">
-            <span>Install app</span>
-            <button
-              type="button"
-              class="sh-install-btn"
-              onClick={props.onInstall}
-            >
-              Install
-            </button>
+          <div class="sh-row">
+            <span>Lock calendar</span>
+            <Switch
+              checked={s.locked}
+              label="Lock calendar (read-only)"
+              onToggle={() => props.onSet("locked", !s.locked)}
+            />
           </div>
-        )}
+
+          <div class="sh-row">
+            <span>Start of week</span>
+            <Seg
+              label="Start of week"
+              value={s.weekStart}
+              onPick={(v) => props.onSet("weekStart", v as 0 | 1)}
+              options={[
+                { v: 0, label: "Sun" },
+                { v: 1, label: "Mon" },
+              ]}
+            />
+          </div>
+
+          <div class="sh-row">
+            <span>Skip weekends</span>
+            <Switch
+              checked={s.skipWeekends}
+              label="Skip weekends"
+              onToggle={() => props.onSet("skipWeekends", !s.skipWeekends)}
+            />
+          </div>
+
+          <div class="sh-row">
+            <span>Mark weekends in red</span>
+            <Switch
+              checked={s.weekendsRed}
+              label="Mark weekends in red"
+              onToggle={() => props.onSet("weekendsRed", !s.weekendsRed)}
+            />
+          </div>
+
+          <div class="sh-row">
+            <span>Highlight today</span>
+            <Switch
+              checked={s.highlightToday}
+              label="Highlight today"
+              onToggle={() => props.onSet("highlightToday", !s.highlightToday)}
+            />
+          </div>
+
+          {props.isSharedTemp && (
+            <div class="sh-row">
+              <span>Shared calendar (temp)</span>
+              <div style={{ display: "flex", gap: "6px" }}>
+                {props.onDiscardShared && (
+                  <button
+                    type="button"
+                    class="sh-install-btn"
+                    onClick={() => {
+                      props.onDiscardShared?.();
+                      props.onClose();
+                    }}
+                  >
+                    Discard
+                  </button>
+                )}
+                {props.onSaveShared && (
+                  <button
+                    type="button"
+                    class="sh-install-btn"
+                    style={{
+                      background: "var(--text)",
+                      color: "var(--bg)",
+                      borderColor: "var(--text)",
+                    }}
+                    onClick={() => {
+                      props.onSaveShared?.();
+                      props.onClose();
+                    }}
+                  >
+                    Add to calendar
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {props.canInstall && props.onInstall && (
+            <div class="sh-row sh-last">
+              <span>Install app</span>
+              <button
+                type="button"
+                class="sh-install-btn"
+                onClick={props.onInstall}
+              >
+                Install
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );

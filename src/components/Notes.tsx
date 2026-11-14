@@ -1,7 +1,4 @@
-import { useEffect, useRef, useState } from "preact/hooks";
-import { idbGet, idbSet } from "../state/db";
-
-export type NotesMap = Record<string, string>;
+import { useStore } from "../state/store";
 
 export function Notes(props: {
   year: number;
@@ -9,53 +6,13 @@ export function Notes(props: {
   day: number;
   locked?: boolean;
 }) {
-  const [notes, setNotes] = useState<NotesMap>({});
-  const saveTimer = useRef<number | null>(null);
-  const notesRef = useRef<NotesMap>({});
-
-  useEffect(() => {
-    idbGet<NotesMap>("notes").then((loaded) => {
-      if (loaded) {
-        setNotes(loaded);
-        notesRef.current = loaded;
-      }
-    });
-  }, []);
-
-  const scheduleSave = (next: NotesMap) => {
-    notesRef.current = next;
-    if (saveTimer.current !== null) {
-      clearTimeout(saveTimer.current);
-    }
-    saveTimer.current = window.setTimeout(() => {
-      idbSet("notes", next);
-      saveTimer.current = null;
-    }, 500);
-  };
-
-  useEffect(() => {
-    const flush = () => {
-      if (saveTimer.current !== null) {
-        clearTimeout(saveTimer.current);
-        saveTimer.current = null;
-        idbSet("notes", notesRef.current);
-      }
-    };
-    window.addEventListener("beforeunload", flush);
-    return () => {
-      window.removeEventListener("beforeunload", flush);
-      flush();
-    };
-  }, []);
-
+  const ui = useStore();
   const dateKey = `${props.year}-${String(props.month + 1).padStart(2, "0")}-${String(props.day).padStart(2, "0")}`;
-  const currentText = notes[dateKey] ?? "";
+  const currentText = ui.notes[dateKey] ?? "";
 
   const handleChange = (val: string) => {
     if (props.locked) return;
-    const next = { ...notes, [dateKey]: val };
-    setNotes(next);
-    scheduleSave(next);
+    ui.setNote(dateKey, val);
   };
 
   const formattedDate = new Intl.DateTimeFormat(undefined, {

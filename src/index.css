@@ -526,7 +526,10 @@ button:focus-visible,
   bottom: 0;
   transform: translateX(-50%);
   width: min(560px, 100%);
-  padding: 14px 18px 30px;
+  max-height: 60vh;
+  max-height: 60dvh;
+  display: flex;
+  flex-direction: column;
   background: var(--surface);
   border: 1px solid var(--line);
   border-bottom: 0;
@@ -537,11 +540,20 @@ button:focus-visible,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 8px;
+  padding: 14px 18px 10px;
   border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
 }
 .sh-head b {
   font-size: 15px;
+}
+.sh-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 18px 24px;
 }
 .sh-row {
   display: flex;
@@ -690,10 +702,6 @@ button:focus-visible,
   }
 }
 
-.edit-sheet {
-  max-height: 85vh;
-  overflow-y: auto;
-}
 .sh-new-form {
   padding: 12px 0 16px;
   border-bottom: 1px solid var(--line);
@@ -823,6 +831,48 @@ button:focus-visible,
   text-align: center;
   color: var(--muted);
   font-size: 13.5px;
+}
+.notes-list {
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.notes-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  background: var(--cell-dim);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background 0.1s,
+    border-color 0.1s;
+}
+.notes-item:hover {
+  background: var(--hover);
+  border-color: var(--text);
+}
+.notes-item-date {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.notes-item-snip {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .notes-sec {

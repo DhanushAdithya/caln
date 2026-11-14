@@ -18,7 +18,7 @@ import {
 import { idbGet, idbSet } from "./db";
 import { todayRef } from "./dates";
 
-export type Sheet = null | "settings" | "groups" | "stats";
+export type Sheet = null | "settings" | "groups" | "stats" | "notes";
 
 export interface ToastData {
   message: string;
@@ -52,6 +52,8 @@ export interface StoreView {
   setSetting: <K extends keyof Settings>(k: K, v: Settings[K]) => void;
   sheet: Sheet;
   setSheet: (s: Sheet) => void;
+  notes: Record<string, string>;
+  setNote: (dateKey: string, text: string) => void;
   jumpToday: () => void;
   createGroup: (name: string, color?: number) => number;
   updateGroup: (id: number, patch: { name?: string; color?: number }) => void;
@@ -94,6 +96,8 @@ function createDefaultState(): State {
 
 let state: State = createDefaultState();
 let settings: Settings = { ...DEFAULT_SETTINGS };
+let notes: Record<string, string> = {};
+let notesTimer: number | null = null;
 let currentSheet: Sheet = null;
 let currentToast: ToastData | null = null;
 let toastTimer: number | null = null;
@@ -310,6 +314,11 @@ export function initStore(): Promise<void> {
       settings = normalizeSettings(savedSettings);
     }
     applyTheme(settings.theme);
+
+    const savedNotes = await idbGet<Record<string, string>>("notes");
+    if (savedNotes) {
+      notes = savedNotes;
+    }
 
     const savedState = await idbGet<State>("state");
     let loadedState: State | null = null;
@@ -677,6 +686,36 @@ function setSetting<K extends keyof Settings>(k: K, v: Settings[K]): void {
   idbSet("settings", settings);
 }
 
+function setNote(dateKey: string, text: string): void {
+  const next = { ...notes };
+  if (!text) {
+    delete next[dateKey];
+  } else {
+    next[dateKey] = text;
+  }
+  notes = next;
+  notify();
+  if (typeof window !== "undefined") {
+    if (notesTimer !== null) {
+      window.clearTimeout(notesTimer);
+    }
+    notesTimer = window.setTimeout(() => {
+      notesTimer = null;
+      idbSet("notes", notes);
+    }, 400);
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", () => {
+    if (notesTimer !== null) {
+      window.clearTimeout(notesTimer);
+      notesTimer = null;
+      idbSet("notes", notes);
+    }
+  });
+}
+
 function setSheet(s: Sheet): void {
   currentSheet = s;
   notify();
@@ -713,6 +752,8 @@ export function useStore(): StoreView {
     setSetting,
     sheet: currentSheet,
     setSheet,
+    notes,
+    setNote,
     jumpToday,
     createGroup,
     updateGroup,

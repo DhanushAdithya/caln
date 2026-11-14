@@ -11,6 +11,7 @@ import { Notes } from "./components/Notes";
 import { SettingsSheet } from "./components/SettingsSheet";
 import { EditSheet } from "./components/EditSheet";
 import { StatSheet } from "./components/StatSheet";
+import { NotesSheet } from "./components/NotesSheet";
 import { Toast } from "./components/Toast";
 import { useStore } from "./state/store";
 
@@ -48,6 +49,7 @@ export function App() {
       <Header
         onGear={() => ui.setSheet(ui.sheet ? null : "settings")}
         onShare={ui.share}
+        onNotes={() => ui.setSheet(ui.sheet === "notes" ? null : "notes")}
       />
       <main class="wrap">
         <section class="row1">
@@ -230,6 +232,20 @@ export function App() {
         activeGroupIndex={ui.sel}
         showAll={showAll}
         color={hex}
+      />
+
+      <NotesSheet
+        open={ui.sheet === "notes"}
+        notes={ui.notes}
+        onClose={() => ui.setSheet(null)}
+        onSelectDate={(y, m, d) => {
+          ui.setYear(y);
+          ui.setMonth(m);
+          setSelectedDate({ y, m, d });
+          ui.setSheet(null);
+          const notesEl = document.querySelector(".notes-sec");
+          notesEl?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }}
       />
 
       <Toast toast={ui.toast} onDismiss={ui.dismissToast} />
