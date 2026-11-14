@@ -668,6 +668,11 @@ function setSetting<K extends keyof Settings>(k: K, v: Settings[K]): void {
   if (k === "theme") {
     applyTheme(settings.theme);
   }
+  if (k === "locked") {
+    try {
+      localStorage.setItem("caln_locked", String(v));
+    } catch {}
+  }
   notify();
   idbSet("settings", settings);
 }

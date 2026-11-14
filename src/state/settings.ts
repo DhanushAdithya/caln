@@ -8,6 +8,7 @@ export interface Settings {
   weekStart: WeekStart;
   theme: ThemeName;
   weekendsRed: boolean;
+  locked: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -16,6 +17,7 @@ export const DEFAULT_SETTINGS: Settings = {
   weekStart: 1,
   theme: "system",
   weekendsRed: true,
+  locked: false,
 };
 
 export function normalizeSettings(
@@ -43,5 +45,15 @@ export function normalizeSettings(
       typeof raw.weekendsRed === "boolean"
         ? raw.weekendsRed
         : DEFAULT_SETTINGS.weekendsRed,
+    locked:
+      typeof raw.locked === "boolean"
+        ? raw.locked
+        : (() => {
+            try {
+              return localStorage.getItem("caln_locked") === "true";
+            } catch {
+              return DEFAULT_SETTINGS.locked;
+            }
+          })(),
   };
 }

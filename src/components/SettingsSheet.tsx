@@ -115,7 +115,7 @@ export function SettingsSheet(props: {
           />
         </div>
 
-        <div class="sh-row sh-last">
+        <div class="sh-row">
           <span>Mark weekends in red</span>
           <Switch
             checked={s.weekendsRed}
@@ -130,6 +130,15 @@ export function SettingsSheet(props: {
             checked={s.highlightToday}
             label="Highlight today"
             onToggle={() => props.onSet("highlightToday", !s.highlightToday)}
+          />
+        </div>
+
+        <div class="sh-row">
+          <span>Lock calendar</span>
+          <Switch
+            checked={s.locked}
+            label="Lock calendar (read-only)"
+            onToggle={() => props.onSet("locked", !s.locked)}
           />
         </div>
 
