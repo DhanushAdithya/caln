@@ -606,6 +606,9 @@ button:focus-visible,
 .sh-seg-notes {
   background: #3b82f6;
 }
+.sh-seg-tasks {
+  background: #ec4899;
+}
 .sh-seg-entries {
   background: #10b981;
 }
@@ -648,6 +651,9 @@ button:focus-visible,
 }
 .sh-dot-notes {
   background: #3b82f6;
+}
+.sh-dot-tasks {
+  background: #ec4899;
 }
 .sh-dot-entries {
   background: #10b981;
@@ -1005,6 +1011,107 @@ button:focus-visible,
   overflow: hidden;
   text-overflow: ellipsis;
   word-break: break-word;
+}
+.task-add-form {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 10px 0 6px;
+}
+.task-add-input {
+  width: 100%;
+  padding-right: 36px;
+}
+.task-add-btn {
+  position: absolute;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--muted);
+  background: transparent;
+  transition:
+    color 0.1s,
+    background 0.1s;
+}
+.task-add-btn:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--cell);
+}
+.task-add-btn:disabled {
+  opacity: 0.3;
+}
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.1s;
+}
+.task-row:hover {
+  background: var(--hover);
+}
+.task-chk {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  background: transparent;
+  border: 1.5px solid var(--muted);
+  color: var(--bg);
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+.task-chk.checked {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+.task-text {
+  flex: 1;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--text);
+  word-break: break-word;
+  cursor: pointer;
+}
+.task-text.task-done {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.task-edit-input {
+  flex: 1;
+  font-size: 13.5px;
+  padding: 4px 6px;
+}
+.task-completed-sec {
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.task-completed-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  padding: 6px 2px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  width: 100%;
+  text-align: left;
+}
+.task-completed-toggle:hover {
+  color: var(--text);
 }
 
 .notes-sec {

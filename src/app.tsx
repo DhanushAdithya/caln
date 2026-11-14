@@ -12,6 +12,7 @@ import { SettingsSheet } from "./components/SettingsSheet";
 import { EditSheet } from "./components/EditSheet";
 import { StatSheet } from "./components/StatSheet";
 import { NotesSheet } from "./components/NotesSheet";
+import { TaskSheet } from "./components/TaskSheet";
 import { Toast } from "./components/Toast";
 import { useStore } from "./state/store";
 
@@ -50,6 +51,7 @@ export function App() {
         onGear={() => ui.setSheet(ui.sheet ? null : "settings")}
         onShare={ui.share}
         onNotes={() => ui.setSheet(ui.sheet === "notes" ? null : "notes")}
+        onTasks={() => ui.setSheet(ui.sheet === "tasks" ? null : "tasks")}
       />
       <main class="wrap">
         <section class="row1">
@@ -206,6 +208,7 @@ export function App() {
         open={ui.sheet === "settings"}
         settings={ui.settings}
         notes={ui.notes}
+        tasks={ui.tasks}
         groups={ui.groups}
         onSet={ui.setSetting}
         onClose={() => ui.setSheet(null)}
@@ -252,6 +255,16 @@ export function App() {
           const notesEl = document.querySelector(".notes-sec");
           notesEl?.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }}
+      />
+
+      <TaskSheet
+        open={ui.sheet === "tasks"}
+        tasks={ui.tasks}
+        onClose={() => ui.setSheet(null)}
+        onAddTask={ui.addTask}
+        onToggleTask={ui.toggleTask}
+        onUpdateTask={ui.updateTask}
+        onDeleteTask={ui.deleteTask}
       />
 
       <Toast toast={ui.toast} onDismiss={ui.dismissToast} />

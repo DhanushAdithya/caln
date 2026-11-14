@@ -18,7 +18,14 @@ import {
 import { idbClear, idbGet, idbSet } from "./db";
 import { todayRef } from "./dates";
 
-export type Sheet = null | "settings" | "groups" | "stats" | "notes";
+export type Sheet = null | "settings" | "groups" | "stats" | "notes" | "tasks";
+
+export interface TaskItem {
+  id: string;
+  text: string;
+  done: boolean;
+  createdAt: number;
+}
 
 export interface ToastData {
   message: string;
@@ -55,6 +62,11 @@ export interface StoreView {
   notes: Record<string, string>;
   setNote: (dateKey: string, text: string) => void;
   deleteNote: (dateKey: string) => void;
+  tasks: TaskItem[];
+  addTask: (text: string) => void;
+  toggleTask: (id: string) => void;
+  updateTask: (id: string, text: string) => void;
+  deleteTask: (id: string) => void;
   jumpToday: () => void;
   createGroup: (name: string, color?: number) => number;
   updateGroup: (id: number, patch: { name?: string; color?: number }) => void;
@@ -100,6 +112,8 @@ let state: State = createDefaultState();
 let settings: Settings = { ...DEFAULT_SETTINGS };
 let notes: Record<string, string> = {};
 let notesTimer: number | null = null;
+let tasks: TaskItem[] = [];
+let tasksTimer: number | null = null;
 let currentSheet: Sheet = null;
 let currentToast: ToastData | null = null;
 let toastTimer: number | null = null;
@@ -320,6 +334,11 @@ export function initStore(): Promise<void> {
     const savedNotes = await idbGet<Record<string, string>>("notes");
     if (savedNotes) {
       notes = savedNotes;
+    }
+
+    const savedTasks = await idbGet<TaskItem[]>("tasks");
+    if (savedTasks && Array.isArray(savedTasks)) {
+      tasks = savedTasks;
     }
 
     const savedState = await idbGet<State>("state");
@@ -719,12 +738,72 @@ function deleteNote(dateKey: string): void {
   }
 }
 
+function scheduleSaveTasks(): void {
+  if (tasksTimer !== null) {
+    window.clearTimeout(tasksTimer);
+  }
+  tasksTimer = window.setTimeout(() => {
+    tasksTimer = null;
+    idbSet("tasks", tasks);
+  }, 400);
+}
+
+function addTask(text: string): void {
+  const trimmed = text.trim();
+  if (!trimmed) return;
+  const item: TaskItem = {
+    id: `t_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    text: trimmed,
+    done: false,
+    createdAt: Date.now(),
+  };
+  tasks = [item, ...tasks];
+  scheduleSaveTasks();
+  notify();
+}
+
+function toggleTask(id: string): void {
+  tasks = tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t));
+  scheduleSaveTasks();
+  notify();
+}
+
+function updateTask(id: string, text: string): void {
+  const trimmed = text.trim();
+  if (!trimmed) return;
+  tasks = tasks.map((t) => (t.id === id ? { ...t, text: trimmed } : t));
+  scheduleSaveTasks();
+  notify();
+}
+
+function deleteTask(id: string): void {
+  const index = tasks.findIndex((t) => t.id === id);
+  if (index === -1) return;
+  const removed = tasks[index];
+  tasks = tasks.filter((t) => t.id !== id);
+  scheduleSaveTasks();
+  notify();
+  showToast("Task deleted", {
+    label: "Undo",
+    onClick: () => {
+      tasks = [...tasks.slice(0, index), removed, ...tasks.slice(index)];
+      scheduleSaveTasks();
+      notify();
+    },
+  });
+}
+
 if (typeof window !== "undefined") {
   window.addEventListener("beforeunload", () => {
     if (notesTimer !== null) {
       window.clearTimeout(notesTimer);
       notesTimer = null;
       idbSet("notes", notes);
+    }
+    if (tasksTimer !== null) {
+      window.clearTimeout(tasksTimer);
+      tasksTimer = null;
+      idbSet("tasks", tasks);
     }
   });
 }
@@ -737,6 +816,10 @@ async function deleteAllData(): Promise<void> {
   if (notesTimer !== null) {
     window.clearTimeout(notesTimer);
     notesTimer = null;
+  }
+  if (tasksTimer !== null) {
+    window.clearTimeout(tasksTimer);
+    tasksTimer = null;
   }
 
   await idbClear();
@@ -758,12 +841,14 @@ async function deleteAllData(): Promise<void> {
   state = createDefaultState();
   settings = { ...DEFAULT_SETTINGS };
   notes = {};
+  tasks = [];
   applyTheme(settings.theme);
   currentSheet = null;
 
   await idbSet("state", state);
   await idbSet("settings", settings);
   await idbSet("notes", notes);
+  await idbSet("tasks", tasks);
 
   notify();
   showToast("All data deleted");
@@ -808,6 +893,11 @@ export function useStore(): StoreView {
     notes,
     setNote,
     deleteNote,
+    tasks,
+    addTask,
+    toggleTask,
+    updateTask,
+    deleteTask,
     jumpToday,
     createGroup,
     updateGroup,

@@ -2,6 +2,7 @@ export function Header(props: {
   onGear: () => void;
   onShare: () => void;
   onNotes: () => void;
+  onTasks: () => void;
 }) {
   return (
     <header class="hdr">
@@ -33,6 +34,28 @@ export function Header(props: {
               <line x1="16" y1="13" x2="8" y2="13" />
               <line x1="16" y1="17" x2="8" y2="17" />
               <line x1="10" y1="9" x2="8" y2="9" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            aria-label="Tasks"
+            title="Tasks"
+            onClick={props.onTasks}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="9 11 12 14 22 4" />
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
             </svg>
           </button>
           <button

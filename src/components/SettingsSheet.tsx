@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "preact/hooks";
 import type { Settings, ThemeName } from "../state/settings";
 import type { Group } from "../state/hash";
+import type { TaskItem } from "../state/store";
 
 function formatBytes(bytes: number): string {
   if (bytes <= 0) return "0 B";
@@ -86,6 +87,7 @@ export function SettingsSheet(props: {
   open: boolean;
   settings: Settings;
   notes: Record<string, string>;
+  tasks: TaskItem[];
   groups: Group[];
   onSet: <K extends keyof Settings>(k: K, v: Settings[K]) => void;
   onClose: () => void;
@@ -103,12 +105,15 @@ export function SettingsSheet(props: {
   const [visible, setVisible] = useState({
     app: true,
     notes: true,
+    tasks: true,
     entries: true,
     settings: true,
   });
   const s = props.settings;
 
-  const toggleCategory = (k: "app" | "notes" | "entries" | "settings") => {
+  const toggleCategory = (
+    k: "app" | "notes" | "tasks" | "entries" | "settings",
+  ) => {
     setVisible((prev) => ({ ...prev, [k]: !prev[k] }));
   };
 
@@ -148,13 +153,19 @@ export function SettingsSheet(props: {
     const notesBytes = hasNotes
       ? new Blob([JSON.stringify(props.notes)]).size
       : 0;
+    const hasTasks = (props.tasks || []).length > 0;
+    const tasksBytes = hasTasks
+      ? new Blob([JSON.stringify(props.tasks)]).size
+      : 0;
     const entriesBytes = new Blob([JSON.stringify(props.groups || [])]).size;
     const settingsBytes = new Blob([JSON.stringify(props.settings || {})]).size;
-    const totalBytes = appBytes + notesBytes + entriesBytes + settingsBytes;
+    const totalBytes =
+      appBytes + notesBytes + tasksBytes + entriesBytes + settingsBytes;
 
     const activeSum =
       (visible.app ? appBytes : 0) +
       (visible.notes ? notesBytes : 0) +
+      (visible.tasks ? tasksBytes : 0) +
       (visible.entries ? entriesBytes : 0) +
       (visible.settings ? settingsBytes : 0);
 
@@ -162,6 +173,8 @@ export function SettingsSheet(props: {
       visible.app && activeSum > 0 ? (appBytes / activeSum) * 100 : 0;
     const notesPct =
       visible.notes && activeSum > 0 ? (notesBytes / activeSum) * 100 : 0;
+    const tasksPct =
+      visible.tasks && activeSum > 0 ? (tasksBytes / activeSum) * 100 : 0;
     const entriesPct =
       visible.entries && activeSum > 0 ? (entriesBytes / activeSum) * 100 : 0;
     const settingsPct =
@@ -170,15 +183,24 @@ export function SettingsSheet(props: {
     return {
       appBytes,
       notesBytes,
+      tasksBytes,
       entriesBytes,
       settingsBytes,
       totalBytes,
       appPct,
       notesPct,
+      tasksPct,
       entriesPct,
       settingsPct,
     };
-  }, [appBytes, props.notes, props.groups, props.settings, visible]);
+  }, [
+    appBytes,
+    props.notes,
+    props.tasks,
+    props.groups,
+    props.settings,
+    visible,
+  ]);
   return (
     <>
       <div class="ovl" onClick={props.onClose} />
@@ -358,6 +380,13 @@ export function SettingsSheet(props: {
                   title={`Notes: ${formatBytes(storage.notesBytes)} (${storage.notesPct.toFixed(1)}%)`}
                 />
               )}
+              {storage.tasksPct > 0 && (
+                <div
+                  class="sh-storage-seg sh-seg-tasks"
+                  style={{ width: `${storage.tasksPct}%` }}
+                  title={`Tasks: ${formatBytes(storage.tasksBytes)} (${storage.tasksPct.toFixed(1)}%)`}
+                />
+              )}
               {storage.entriesPct > 0 && (
                 <div
                   class="sh-storage-seg sh-seg-entries"
@@ -414,6 +443,27 @@ export function SettingsSheet(props: {
                 <span class="sh-storage-label">Notes</span>
                 <span class="sh-storage-val">
                   {formatBytes(storage.notesBytes)}
+                </span>
+              </div>
+              <div
+                class="sh-storage-item"
+                role="button"
+                tabIndex={0}
+                aria-pressed={visible.tasks}
+                onClick={() => toggleCategory("tasks")}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggleCategory("tasks");
+                  }
+                }}
+              >
+                <span
+                  class={`sh-storage-dot ${visible.tasks ? "sh-dot-tasks" : "sh-dot-off"}`}
+                />
+                <span class="sh-storage-label">Tasks</span>
+                <span class="sh-storage-val">
+                  {formatBytes(storage.tasksBytes)}
                 </span>
               </div>
               <div
