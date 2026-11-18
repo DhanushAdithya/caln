@@ -8,7 +8,7 @@ import {
   ymdToIdx,
 } from "../state/dates";
 import { monthNames, monthTitle } from "../ui/i18n";
-import { isDayMarked } from "../state/hash";
+import { isDayMarked, getDayValue } from "../state/hash";
 import type { Group } from "../state/hash";
 import { PALETTE } from "../state/palette";
 
@@ -151,7 +151,11 @@ export function StatSheet(props: {
           label: `${mNames[viewMonth]} ${d}`,
           xLabel: d === 1 || d % 5 === 0 || d === len ? String(d) : "",
           countFn: (g: Group) =>
-            isDayMarked(g.years?.[viewYear], idx) ? 1 : 0,
+            g.variant === "frequency"
+              ? getDayValue(g.years?.[viewYear], idx)
+              : isDayMarked(g.years?.[viewYear], idx)
+                ? 1
+                : 0,
         });
       }
     } else if (period === "weekly") {
@@ -170,7 +174,11 @@ export function StatSheet(props: {
           countFn: (g: Group) => {
             let count = 0;
             for (let idx = start; idx < end; idx++) {
-              if (isDayMarked(g.years?.[viewYear], idx)) count++;
+              if (g.variant === "frequency") {
+                count += getDayValue(g.years?.[viewYear], idx);
+              } else if (isDayMarked(g.years?.[viewYear], idx)) {
+                count++;
+              }
             }
             return count;
           },
@@ -187,7 +195,11 @@ export function StatSheet(props: {
           countFn: (g: Group) => {
             let count = 0;
             for (let d = 0; d < len; d++) {
-              if (isDayMarked(g.years?.[viewYear], start + d)) count++;
+              if (g.variant === "frequency") {
+                count += getDayValue(g.years?.[viewYear], start + d);
+              } else if (isDayMarked(g.years?.[viewYear], start + d)) {
+                count++;
+              }
             }
             return count;
           },
@@ -221,7 +233,11 @@ export function StatSheet(props: {
           countFn: (g: Group) => {
             let count = 0;
             for (let idx = 0; idx < len; idx++) {
-              if (isDayMarked(g.years?.[y], idx)) count++;
+              if (g.variant === "frequency") {
+                count += getDayValue(g.years?.[y], idx);
+              } else if (isDayMarked(g.years?.[y], idx)) {
+                count++;
+              }
             }
             return count;
           },

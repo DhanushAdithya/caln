@@ -7,8 +7,9 @@ import {
   ymdToIdx,
 } from "../state/dates";
 import { monthTitle, weekdayLong, weekdayShort } from "../ui/i18n";
-import { onColor } from "../state/palette";
+import { onColor, getHeatColor, getHeatTextColor } from "../state/palette";
 import type { WeekStart } from "../state/dates";
+import type { GroupVariant } from "../state/hash";
 
 function makeSplitGradient(colors: string[]): string {
   if (colors.length === 0) return "";
@@ -32,6 +33,11 @@ export function MonthGrid(props: {
   color: string;
   today: { y: number; idx: number };
   isMarked: (y: number, idx: number) => boolean;
+  groupVariant?: GroupVariant;
+  getDayValue?: (y: number, idx: number) => number;
+  maxVal?: number;
+  onIncrement?: (y: number, idx: number) => void;
+  onResetMark?: (y: number, idx: number) => void;
   selectedDate?: { y: number; m: number; d: number };
   onSelectDate?: (y: number, m: number, d: number) => void;
   onPrevMonth?: () => void;
@@ -48,14 +54,25 @@ export function MonthGrid(props: {
   showAll?: boolean;
   getDayColors?: (y: number, idx: number) => string[];
 }) {
-  const gridRef = useRef<HTMLDivElement>(null);
   const isPointerDragging = useRef(false);
   const dragTargetValue = useRef<boolean>(true);
   const dragStartedCell = useRef<{ y: number; idx: number } | null>(null);
   const hasDragMoved = useRef(false);
+  const longPressTimer = useRef<number | null>(null);
+  const isLongPressed = useRef(false);
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
+  const visitedFreqCells = useRef<Set<string>>(new Set());
+
+  const clearLongPress = () => {
+    if (longPressTimer.current !== null) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
 
   useEffect(() => {
     const handleGlobalUp = () => {
+      clearLongPress();
       if (isPointerDragging.current) {
         isPointerDragging.current = false;
         if (hasDragMoved.current) {
@@ -64,7 +81,10 @@ export function MonthGrid(props: {
       }
       dragStartedCell.current = null;
       hasDragMoved.current = false;
+      dragStartPos.current = null;
+      visitedFreqCells.current.clear();
     };
+
     window.addEventListener("pointerup", handleGlobalUp);
     window.addEventListener("pointercancel", handleGlobalUp);
     return () => {
@@ -109,14 +129,16 @@ export function MonthGrid(props: {
       next = i + spec.cols < spec.cells.length ? i + spec.cols : null;
     if (next !== null) {
       e.preventDefault();
-      const btns =
-        gridRef.current?.querySelectorAll<HTMLButtonElement>(".mg-d");
-      btns?.[next]?.focus();
+      const el = document.querySelectorAll<HTMLButtonElement>(".mg-d")[next];
+      el?.focus();
     }
   };
 
+  const isFreqGroup = props.groupVariant === "frequency" && !props.showAll;
+  const max = props.maxVal && props.maxVal > 0 ? props.maxVal : 1;
+
   return (
-    <section class="mg-sec" aria-label={monthTitle(props.year, props.month)}>
+    <section class="mg-wrap" aria-label="Month calendar view">
       <div class="mg-head">
         <h2 class="mg-title">{monthTitle(props.year, props.month)}</h2>
         <div
@@ -184,7 +206,6 @@ export function MonthGrid(props: {
         </div>
       </div>
       <div
-        ref={gridRef}
         class="mg"
         style={{ gridTemplateColumns: `repeat(${spec.cols}, 1fr)` }}
       >
@@ -202,23 +223,40 @@ export function MonthGrid(props: {
             props.showAll && props.getDayColors
               ? props.getDayColors(c.ref.y, c.ref.idx)
               : null;
-          const marked = dayColors
-            ? dayColors.length > 0
-            : props.isMarked(c.ref.y, c.ref.idx);
-          const bg =
-            dayColors && dayColors.length > 0
-              ? makeSplitGradient(dayColors)
-              : props.color;
 
+          const freqVal = props.getDayValue
+            ? props.getDayValue(c.ref.y, c.ref.idx)
+            : props.isMarked(c.ref.y, c.ref.idx)
+              ? 1
+              : 0;
+
+          const marked = dayColors ? dayColors.length > 0 : freqVal > 0;
+
+          let bg = props.color;
           let cellTextColor = on;
           let cellTextShadow: string | undefined;
+
           if (dayColors && dayColors.length > 0) {
+            bg = makeSplitGradient(dayColors);
             if (dayColors.length === 1) {
               cellTextColor = onColor(dayColors[0]);
             } else {
               cellTextColor = "#ffffff";
               cellTextShadow = "0 1px 2px rgba(0, 0, 0, 0.75)";
             }
+          } else if (isFreqGroup && marked) {
+            let level = 1;
+            if (max > 1) {
+              const ratio = freqVal / max;
+              if (ratio > 0.75) level = 4;
+              else if (ratio > 0.5) level = 3;
+              else if (ratio > 0.25) level = 2;
+              else level = 1;
+            } else {
+              level = 4;
+            }
+            bg = getHeatColor(props.color, level);
+            cellTextColor = getHeatTextColor(props.color, level);
           }
 
           const weekend = c.wd === 0 || c.wd === 6;
@@ -238,6 +276,12 @@ export function MonthGrid(props: {
             (marked ? " mk" : "") +
             (today ? " t" : "") +
             (isSelected ? " sel" : "");
+
+          const ariaLabel =
+            isFreqGroup && marked
+              ? `${d} ${long[c.wd]}: ${freqVal}`
+              : `${d} ${long[c.wd]}`;
+
           return (
             <button
               key={c.slot}
@@ -256,49 +300,109 @@ export function MonthGrid(props: {
                   : null),
               }}
               aria-pressed={marked}
-              aria-label={`${d} ${long[c.wd]}`}
+              aria-label={ariaLabel}
+              onContextMenu={(e) => {
+                e.preventDefault();
+              }}
               onPointerDown={(e) => {
                 if (props.locked) return;
-                if (e.pointerType !== "mouse" || e.button !== 0) return;
-                const currentlyMarked = props.isMarked(c.ref.y, c.ref.idx);
-                isPointerDragging.current = true;
-                dragTargetValue.current = !currentlyMarked;
-                dragStartedCell.current = { y: c.ref.y, idx: c.ref.idx };
+                if (e.pointerType === "mouse" && e.button !== 0) return;
+                isLongPressed.current = false;
                 hasDragMoved.current = false;
+                dragStartPos.current = { x: e.clientX, y: e.clientY };
+
+                const cellY = c.ref.y;
+                const cellIdx = c.ref.idx;
+
+                clearLongPress();
+                longPressTimer.current = window.setTimeout(() => {
+                  isLongPressed.current = true;
+                  props.onResetMark?.(cellY, cellIdx);
+                }, 500);
+
+                if (isFreqGroup) {
+                  isPointerDragging.current = true;
+                  visitedFreqCells.current = new Set([`${cellY}-${cellIdx}`]);
+                } else {
+                  if (e.pointerType === "mouse") {
+                    const currentlyMarked = props.isMarked(cellY, cellIdx);
+                    isPointerDragging.current = true;
+                    dragTargetValue.current = !currentlyMarked;
+                    dragStartedCell.current = { y: cellY, idx: cellIdx };
+                  }
+                }
+              }}
+              onPointerMove={(e) => {
+                if (dragStartPos.current) {
+                  const dx = Math.abs(e.clientX - dragStartPos.current.x);
+                  const dy = Math.abs(e.clientY - dragStartPos.current.y);
+                  if (dx > 8 || dy > 8) {
+                    clearLongPress();
+                  }
+                }
               }}
               onPointerEnter={(e) => {
-                if (props.locked) return;
-                if (!isPointerDragging.current || e.pointerType !== "mouse")
-                  return;
-                if (!hasDragMoved.current && dragStartedCell.current) {
-                  hasDragMoved.current = true;
+                if (props.locked || !isPointerDragging.current) return;
+                clearLongPress();
+                hasDragMoved.current = true;
+
+                if (isFreqGroup) {
+                  const key = `${c.ref.y}-${c.ref.idx}`;
+                  if (!visitedFreqCells.current.has(key)) {
+                    visitedFreqCells.current.add(key);
+                    props.onIncrement?.(c.ref.y, c.ref.idx);
+                  }
+                } else if (e.pointerType === "mouse") {
+                  if (dragStartedCell.current) {
+                    props.onSetMark?.(
+                      dragStartedCell.current.y,
+                      dragStartedCell.current.idx,
+                      dragTargetValue.current,
+                      false,
+                    );
+                    dragStartedCell.current = null;
+                  }
                   props.onSetMark?.(
-                    dragStartedCell.current.y,
-                    dragStartedCell.current.idx,
+                    c.ref.y,
+                    c.ref.idx,
                     dragTargetValue.current,
                     false,
                   );
                 }
-                props.onSetMark?.(
-                  c.ref.y,
-                  c.ref.idx,
-                  dragTargetValue.current,
-                  false,
-                );
+              }}
+              onPointerUp={() => {
+                clearLongPress();
+              }}
+              onPointerCancel={() => {
+                clearLongPress();
+                isLongPressed.current = false;
               }}
               onClick={(e) => {
+                clearLongPress();
+                if (isLongPressed.current) {
+                  isLongPressed.current = false;
+                  e.preventDefault();
+                  return;
+                }
                 if (hasDragMoved.current) {
                   e.preventDefault();
                   return;
                 }
                 props.onSelectDate?.(c.ref.y, c.m, d);
                 if (!props.locked) {
-                  props.onToggle(c.ref.y, c.ref.idx);
+                  if (isFreqGroup) {
+                    props.onIncrement?.(c.ref.y, c.ref.idx);
+                  } else {
+                    props.onToggle(c.ref.y, c.ref.idx);
+                  }
                 }
               }}
               onKeyDown={(e) => onKeyDown(e, i)}
             >
               {d}
+              {isFreqGroup && freqVal > 0 && (
+                <span class="mg-badge">{freqVal}</span>
+              )}
             </button>
           );
         })}

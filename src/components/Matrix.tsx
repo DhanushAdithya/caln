@@ -7,6 +7,8 @@ import {
   weekdayOf,
 } from "../state/dates";
 import { weekdayNarrow, monthNames } from "../ui/i18n";
+import { getHeatColor } from "../state/palette";
+import type { GroupVariant } from "../state/hash";
 
 export function Matrix(props: {
   year: number;
@@ -15,6 +17,9 @@ export function Matrix(props: {
   today: { y: number; idx: number };
   color: string;
   isMarked: (idx: number) => boolean;
+  groupVariant?: GroupVariant;
+  getDayValue?: (idx: number) => number;
+  maxVal?: number;
   selectedDate?: { y: number; m: number; d: number };
   onSelectDate?: (y: number, m: number, d: number) => void;
   onSelectMonth?: (m: number) => void;
@@ -25,6 +30,9 @@ export function Matrix(props: {
   const wdNames = weekdayNarrow();
   const monthNamesS = monthNames();
   const total = daysInYear(props.year);
+
+  const isFreq = props.groupVariant === "frequency" && !props.showAll;
+  const max = props.maxVal && props.maxVal > 0 ? props.maxVal : 1;
 
   const cells: preact.JSX.Element[] = [];
   for (let idx = 0; idx < total; idx++) {
@@ -40,12 +48,41 @@ export function Matrix(props: {
       props.selectedDate.y === props.year &&
       props.selectedDate.m === m &&
       props.selectedDate.d === d;
+
+    const val = props.getDayValue
+      ? props.getDayValue(idx)
+      : props.isMarked(idx)
+        ? 1
+        : 0;
+    const marked = val > 0;
+
+    let cellBg = props.showAll ? "var(--text)" : props.color;
+    if (isFreq && marked) {
+      let level = 1;
+      if (max > 1) {
+        const ratio = val / max;
+        if (ratio > 0.75) level = 4;
+        else if (ratio > 0.5) level = 3;
+        else if (ratio > 0.25) level = 2;
+        else level = 1;
+      } else {
+        level = 4;
+      }
+      cellBg = getHeatColor(props.color, level);
+    }
+
     const cls =
       "mx-cell" +
       (future ? " f" : "") +
-      (props.isMarked(idx) ? " mk" : "") +
+      (marked ? " mk" : "") +
       (sameYear && props.today.idx === idx ? " t" : "") +
       (isSelected ? " sel" : "");
+
+    const labelText =
+      isFreq && marked
+        ? `${monthNamesS[m]} ${d}, ${props.year}: ${val}`
+        : `${monthNamesS[m]} ${d}, ${props.year}`;
+
     cells.push(
       <button
         key={idx}
@@ -54,11 +91,9 @@ export function Matrix(props: {
         style={{
           gridColumn: L.colOf(idx) + 1,
           gridRow: row + 1,
-          ...(props.isMarked(idx)
-            ? { background: props.showAll ? "var(--text)" : props.color }
-            : null),
+          ...(marked ? { background: cellBg } : null),
         }}
-        aria-label={`${monthNamesS[m]} ${d}, ${props.year}`}
+        aria-label={labelText}
         onClick={() => {
           props.onSelectDate?.(props.year, m, d);
           props.onSelectMonth?.(m);

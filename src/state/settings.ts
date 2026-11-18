@@ -65,13 +65,8 @@ export function normalizeSettings(
       typeof raw.hideMatrix === "boolean"
         ? raw.hideMatrix
         : DEFAULT_SETTINGS.hideMatrix,
-    sound:
-      typeof raw.sound === "boolean"
-        ? raw.sound
-        : DEFAULT_SETTINGS.sound,
+    sound: typeof raw.sound === "boolean" ? raw.sound : DEFAULT_SETTINGS.sound,
     haptics:
-      typeof raw.haptics === "boolean"
-        ? raw.haptics
-        : DEFAULT_SETTINGS.haptics,
+      typeof raw.haptics === "boolean" ? raw.haptics : DEFAULT_SETTINGS.haptics,
   };
 }

@@ -1,8 +1,12 @@
+export type GroupVariant = "boolean" | "frequency";
+
 export interface Group {
   id: number;
   name: string;
   color: number;
-  years: Record<number, Uint8Array>;
+  variant?: GroupVariant;
+  step?: number;
+  years: Record<number, Uint8Array | Uint16Array>;
 }
 
 export interface State {
@@ -55,30 +59,107 @@ function uvarintLen(val: number): number {
 }
 
 export function isDayMarked(
-  yearMarks: Uint8Array | undefined,
+  yearMarks: Uint8Array | Uint16Array | undefined,
   dayIdx: number,
 ): boolean {
   if (!yearMarks || dayIdx < 0 || dayIdx >= 366) return false;
-  return (yearMarks[dayIdx >> 3] & (1 << (dayIdx & 7))) !== 0;
+  if (yearMarks.length === 46) {
+    return (yearMarks[dayIdx >> 3] & (1 << (dayIdx & 7))) !== 0;
+  }
+  return (yearMarks[dayIdx] || 0) > 0;
+}
+
+export function getDayValue(
+  yearMarks: Uint8Array | Uint16Array | undefined,
+  dayIdx: number,
+): number {
+  if (!yearMarks || dayIdx < 0 || dayIdx >= 366) return 0;
+  if (yearMarks.length === 46) {
+    return (yearMarks[dayIdx >> 3] & (1 << (dayIdx & 7))) !== 0 ? 1 : 0;
+  }
+  return yearMarks[dayIdx] || 0;
 }
 
 export function setDayMark(
-  yearMarks: Uint8Array,
+  yearMarks: Uint8Array | Uint16Array,
   dayIdx: number,
   marked: boolean,
 ): void {
   if (dayIdx < 0 || dayIdx >= 366) return;
-  const byteIdx = dayIdx >> 3;
-  const bit = 1 << (dayIdx & 7);
-  if (marked) {
-    yearMarks[byteIdx] |= bit;
+  if (yearMarks.length === 46) {
+    const byteIdx = dayIdx >> 3;
+    const bit = 1 << (dayIdx & 7);
+    if (marked) {
+      yearMarks[byteIdx] |= bit;
+    } else {
+      yearMarks[byteIdx] &= ~bit;
+    }
   } else {
-    yearMarks[byteIdx] &= ~bit;
+    yearMarks[dayIdx] = marked ? 1 : 0;
   }
 }
 
+export function setDayValue(
+  yearMarks: Uint8Array | Uint16Array,
+  dayIdx: number,
+  val: number,
+): void {
+  if (dayIdx < 0 || dayIdx >= 366) return;
+  if (yearMarks.length === 46) {
+    setDayMark(yearMarks, dayIdx, val > 0);
+  } else {
+    yearMarks[dayIdx] = Math.max(0, Math.floor(val));
+  }
+}
+
+export function convertGroupToFrequency(group: Group, defaultStep = 1): Group {
+  const newYears: Record<number, Uint16Array> = {};
+  for (const yStr of Object.keys(group.years)) {
+    const y = Number(yStr);
+    const oldMarks = group.years[y];
+    const freq = new Uint16Array(366);
+    if (oldMarks) {
+      for (let d = 0; d < 366; d++) {
+        if (isDayMarked(oldMarks, d)) {
+          freq[d] = 1;
+        }
+      }
+    }
+    newYears[y] = freq;
+  }
+  return {
+    ...group,
+    variant: "frequency",
+    step: group.step || defaultStep,
+    years: newYears,
+  };
+}
+
+export function convertGroupToBoolean(group: Group): Group {
+  const newYears: Record<number, Uint8Array> = {};
+  for (const yStr of Object.keys(group.years)) {
+    const y = Number(yStr);
+    const oldMarks = group.years[y];
+    const bitset = new Uint8Array(46);
+    if (oldMarks) {
+      for (let d = 0; d < 366; d++) {
+        const val = getDayValue(oldMarks, d);
+        if (val >= 1) {
+          setDayMark(bitset, d, true);
+        }
+      }
+    }
+    newYears[y] = bitset;
+  }
+  return {
+    ...group,
+    variant: "boolean",
+    years: newYears,
+  };
+}
+
 function toRuns(
-  yearMarks: Uint8Array,
+  yearMarks: Uint8Array | Uint16Array,
   maxDays = 366,
 ): [start: number, len: number][] {
   const runs: [start: number, len: number][] = [];
@@ -103,7 +184,9 @@ function toRuns(
   return runs;
 }
 
-export function hasAnyMarks(yearMarks: Uint8Array | undefined): boolean {
+export function hasAnyMarks(
+  yearMarks: Uint8Array | Uint16Array | undefined,
+): boolean {
   if (!yearMarks) return false;
   for (let i = 0; i < yearMarks.length; i++) {
     if (yearMarks[i] !== 0) return true;
@@ -137,7 +220,10 @@ function base64UrlToBytes(str: string): Uint8Array {
 export function serializeBinary(state: State): Uint8Array {
   const buf: number[] = [];
   buf.push(0x43, 0x4e);
-  writeUVarint(buf, 1);
+
+  const hasFrequency = state.groups.some((g) => g.variant === "frequency");
+  const version = hasFrequency ? 2 : 1;
+  writeUVarint(buf, version);
 
   const baselineYear = state.year;
   writeUVarint(buf, baselineYear);
@@ -157,6 +243,12 @@ export function serializeBinary(state: State): Uint8Array {
     }
     writeUVarint(buf, g.color);
 
+    const isFreq = g.variant === "frequency";
+    if (version >= 2) {
+      writeUVarint(buf, isFreq ? 1 : 0);
+      writeUVarint(buf, Math.max(1, g.step || 1));
+    }
+
     const activeYears = Object.keys(g.years)
       .map(Number)
       .filter((y) => hasAnyMarks(g.years[y]))
@@ -166,24 +258,40 @@ export function serializeBinary(state: State): Uint8Array {
     for (const y of activeYears) {
       writeUVarint(buf, zigzag(y - baselineYear));
       const marks = g.years[y];
-      const runs = toRuns(marks);
 
-      let rleSize = uvarintLen(runs.length);
-      for (const [start, len] of runs) {
-        rleSize += uvarintLen(start) + uvarintLen(len - 1);
-      }
-
-      if (rleSize < 46) {
-        writeUVarint(buf, 1);
-        writeUVarint(buf, runs.length);
-        for (const [start, len] of runs) {
-          writeUVarint(buf, start);
-          writeUVarint(buf, len - 1);
+      if (isFreq || (marks && marks.length > 46)) {
+        const nonZero: [number, number][] = [];
+        for (let d = 0; d < 366; d++) {
+          const val = getDayValue(marks, d);
+          if (val > 0) nonZero.push([d, val]);
+        }
+        writeUVarint(buf, 2);
+        writeUVarint(buf, nonZero.length);
+        let prevD = 0;
+        for (const [d, val] of nonZero) {
+          writeUVarint(buf, d - prevD);
+          writeUVarint(buf, val);
+          prevD = d;
         }
       } else {
-        writeUVarint(buf, 0);
-        for (let i = 0; i < 46; i++) {
-          buf.push(marks[i] ?? 0);
+        const runs = toRuns(marks);
+        let rleSize = uvarintLen(runs.length);
+        for (const [start, len] of runs) {
+          rleSize += uvarintLen(start) + uvarintLen(len - 1);
+        }
+
+        if (rleSize < 46) {
+          writeUVarint(buf, 1);
+          writeUVarint(buf, runs.length);
+          for (const [start, len] of runs) {
+            writeUVarint(buf, start);
+            writeUVarint(buf, len - 1);
+          }
+        } else {
+          writeUVarint(buf, 0);
+          for (let i = 0; i < 46; i++) {
+            buf.push(marks[i] ?? 0);
+          }
         }
       }
     }
@@ -198,7 +306,7 @@ function deserializeBinary(bytes: Uint8Array): State {
   }
   const offset = { pos: 2 };
   const version = readUVarint(bytes, offset);
-  if (version !== 1) {
+  if (version !== 1 && version !== 2) {
     throw new Error(`Unsupported state version: ${version}`);
   }
 
@@ -223,22 +331,33 @@ function deserializeBinary(bytes: Uint8Array): State {
     offset.pos += nameLen;
     const name = textDecoder.decode(nameBytes);
     const color = readUVarint(bytes, offset);
+
+    let variant: GroupVariant = "boolean";
+    let step = 1;
+    if (version >= 2) {
+      const vCode = readUVarint(bytes, offset);
+      variant = vCode === 1 ? "frequency" : "boolean";
+      step = Math.max(1, readUVarint(bytes, offset));
+    }
+
     const yearCount = readUVarint(bytes, offset);
-    const years: Record<number, Uint8Array> = {};
+    const years: Record<number, Uint8Array | Uint16Array> = {};
 
     for (let yi = 0; yi < yearCount; yi++) {
       const yDelta = unzigzag(readUVarint(bytes, offset));
       const y = baselineYear + yDelta;
       const mode = readUVarint(bytes, offset);
-      const marks = new Uint8Array(46);
 
       if (mode === 0) {
         if (offset.pos + 46 > bytes.length) {
           throw new Error("Truncated bitset data");
         }
+        const marks = new Uint8Array(46);
         marks.set(bytes.slice(offset.pos, offset.pos + 46));
         offset.pos += 46;
+        years[y] = marks;
       } else if (mode === 1) {
+        const marks = new Uint8Array(46);
         const runCount = readUVarint(bytes, offset);
         for (let ri = 0; ri < runCount; ri++) {
           const start = readUVarint(bytes, offset);
@@ -248,14 +367,26 @@ function deserializeBinary(bytes: Uint8Array): State {
             setDayMark(marks, d, true);
           }
         }
+        years[y] = marks;
+      } else if (mode === 2) {
+        const marks = new Uint16Array(366);
+        const entryCount = readUVarint(bytes, offset);
+        let currD = 0;
+        for (let ei = 0; ei < entryCount; ei++) {
+          const delta = readUVarint(bytes, offset);
+          currD += delta;
+          const val = readUVarint(bytes, offset);
+          if (currD < 366) {
+            marks[currD] = val;
+          }
+        }
+        years[y] = marks;
       } else {
         throw new Error(`Unknown year mode: ${mode}`);
       }
-
-      years[y] = marks;
     }
 
-    groups.push({ id, name, color, years });
+    groups.push({ id, name, color, variant, step, years });
   }
 
   return {
@@ -303,11 +434,13 @@ async function decompressDeflateRaw(
 export async function encodeHash(state: State): Promise<string> {
   const rawBytes = serializeBinary(state);
   const compBytes = await compressDeflateRaw(rawBytes);
+  const hasFrequency = state.groups.some((g) => g.variant === "frequency");
+  const prefix = hasFrequency ? "v2" : "v1";
 
   if (compBytes && compBytes.length < rawBytes.length) {
-    return `#v1c.${bytesToBase64Url(compBytes)}`;
+    return `#${prefix}c.${bytesToBase64Url(compBytes)}`;
   }
-  return `#v1r.${bytesToBase64Url(rawBytes)}`;
+  return `#${prefix}r.${bytesToBase64Url(rawBytes)}`;
 }
 
 export async function decodeHash(hash: string): Promise<State | null> {
@@ -316,14 +449,14 @@ export async function decodeHash(hash: string): Promise<State | null> {
   if (!str) return null;
 
   try {
-    if (str.startsWith("v1c.")) {
+    if (str.startsWith("v1c.") || str.startsWith("v2c.")) {
       const b64 = str.slice(4);
       const compBytes = base64UrlToBytes(b64);
       const decompBytes = await decompressDeflateRaw(compBytes);
       if (!decompBytes) return null;
       return deserializeBinary(decompBytes);
     }
-    if (str.startsWith("v1r.")) {
+    if (str.startsWith("v1r.") || str.startsWith("v2r.")) {
       const b64 = str.slice(4);
       const rawBytes = base64UrlToBytes(b64);
       return deserializeBinary(rawBytes);

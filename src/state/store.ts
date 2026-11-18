@@ -6,7 +6,11 @@ import {
   hasAnyMarks,
   isDayMarked,
   setDayMark,
+  getDayValue,
+  convertGroupToFrequency,
+  convertGroupToBoolean,
   type Group,
+  type GroupVariant,
   type State,
 } from "./hash";
 import {
@@ -55,7 +59,16 @@ export interface StoreView {
   prevMonth: () => void;
   nextMonth: () => void;
   hasMark: (groupIndex: number, year: number, dayIdx: number) => boolean;
+  getDayValue: (groupIndex: number, year: number, dayIdx: number) => number;
+  getMaxDayValue: (groupIndex: number, year: number) => number;
   toggle: (groupIndex: number, year: number, dayIdx: number) => void;
+  incrementMark: (
+    groupIndex: number,
+    year: number,
+    dayIdx: number,
+    step?: number,
+  ) => void;
+  resetMark: (groupIndex: number, year: number, dayIdx: number) => void;
   setMark: (
     groupIndex: number,
     year: number,
@@ -78,11 +91,27 @@ export interface StoreView {
   updateTask: (id: string, text: string, groupId?: number) => void;
   deleteTask: (id: string) => void;
   createTaskGroup: (name: string, color?: number) => number;
-  updateTaskGroup: (id: number, patch: { name?: string; color?: number }) => void;
+  updateTaskGroup: (
+    id: number,
+    patch: { name?: string; color?: number },
+  ) => void;
   deleteTaskGroup: (id: number) => void;
   jumpToday: () => void;
-  createGroup: (name: string, color?: number) => number;
-  updateGroup: (id: number, patch: { name?: string; color?: number }) => void;
+  createGroup: (
+    name: string,
+    color?: number,
+    variant?: GroupVariant,
+    step?: number,
+  ) => number;
+  updateGroup: (
+    id: number,
+    patch: {
+      name?: string;
+      color?: number;
+      variant?: GroupVariant;
+      step?: number;
+    },
+  ) => void;
   deleteGroup: (id: number) => void;
   undoDelete: () => void;
   reorderGroup: (fromIndex: number, toIndex: number) => void;
@@ -244,10 +273,13 @@ async function saveSharedToLocal(): Promise<void> {
     const assignedId = nextId++;
     if (firstNewId === null) firstNewId = assignedId;
 
-    const clonedYears: Record<number, Uint8Array> = {};
+    const clonedYears: Record<number, Uint8Array | Uint16Array> = {};
     if (g.years) {
       for (const y of Object.keys(g.years).map(Number)) {
-        clonedYears[y] = new Uint8Array(g.years[y]);
+        clonedYears[y] =
+          g.years[y].length === 46
+            ? new Uint8Array(g.years[y])
+            : new Uint16Array(g.years[y]);
       }
     }
 
@@ -255,6 +287,8 @@ async function saveSharedToLocal(): Promise<void> {
       id: assignedId,
       name: g.name,
       color: g.color,
+      variant: g.variant,
+      step: g.step,
       years: clonedYears,
     });
   }
@@ -485,6 +519,8 @@ async function shareLink(): Promise<void> {
   const urlObj = new URL(window.location.href);
   urlObj.hash = hash;
   const shareUrl = urlObj.toString();
+  const isLarge = shareUrl.length > 2048;
+
   if (navigator.share) {
     try {
       await navigator.share({
@@ -500,7 +536,15 @@ async function shareLink(): Promise<void> {
   }
   try {
     await navigator.clipboard.writeText(shareUrl);
-    showToast("Link copied to clipboard");
+    if (isLarge) {
+      showToast(
+        "Link copied (large calendar, ~" +
+          Math.round(shareUrl.length / 1024) +
+          " KB)",
+      );
+    } else {
+      showToast("Link copied to clipboard");
+    }
   } catch {
     showToast("Failed to copy link");
   }
@@ -621,6 +665,79 @@ function setMark(
   updateState({ ...state, groups: nextGroups }, { pushHash });
 }
 
+function incrementMark(
+  groupIndex: number,
+  year: number,
+  dayIdx: number,
+  step?: number,
+  pushHash = true,
+): void {
+  const group = state.groups[groupIndex];
+  if (!group) return;
+
+  const currentYearMarks = group.years[year];
+  let nextMarks: Uint16Array;
+  if (currentYearMarks && currentYearMarks.length === 366) {
+    nextMarks = new Uint16Array(currentYearMarks);
+  } else {
+    nextMarks = new Uint16Array(366);
+    if (currentYearMarks) {
+      for (let d = 0; d < 366; d++) {
+        if (isDayMarked(currentYearMarks, d)) {
+          nextMarks[d] = 1;
+        }
+      }
+    }
+  }
+
+  const inc = step ?? group.step ?? 1;
+  nextMarks[dayIdx] = (nextMarks[dayIdx] || 0) + inc;
+
+  triggerFeedback(settings, "on");
+
+  const nextYears = { ...group.years, [year]: nextMarks };
+  const nextGroups = state.groups.map((g, i) =>
+    i === groupIndex ? { ...g, years: nextYears } : g,
+  );
+  updateState({ ...state, groups: nextGroups }, { pushHash });
+}
+
+function resetMark(
+  groupIndex: number,
+  year: number,
+  dayIdx: number,
+  pushHash = true,
+): void {
+  const group = state.groups[groupIndex];
+  if (!group) return;
+
+  const currentYearMarks = group.years[year];
+  if (!currentYearMarks) return;
+
+  let nextMarks: Uint8Array | Uint16Array;
+  if (currentYearMarks.length === 46) {
+    nextMarks = new Uint8Array(currentYearMarks);
+    setDayMark(nextMarks, dayIdx, false);
+  } else {
+    nextMarks = new Uint16Array(currentYearMarks);
+    nextMarks[dayIdx] = 0;
+  }
+
+  triggerFeedback(settings, "off");
+
+  const nextYears = { ...group.years };
+  if (hasAnyMarks(nextMarks)) {
+    nextYears[year] = nextMarks;
+  } else {
+    delete nextYears[year];
+  }
+
+  const nextGroups = state.groups.map((g, i) =>
+    i === groupIndex ? { ...g, years: nextYears } : g,
+  );
+  updateState({ ...state, groups: nextGroups }, { pushHash });
+}
+
 function commitMarks(): void {
   if (typeof window === "undefined") return;
   encodeHash(state).then((h) => {
@@ -640,17 +757,50 @@ function toggleMark(groupIndex: number, year: number, dayIdx: number): void {
     return;
   }
 
-  const currentlyMarked = isDayMarked(group.years[year], dayIdx);
-  setMark(groupIndex, year, dayIdx, !currentlyMarked, true);
+  if (group.variant === "frequency") {
+    incrementMark(groupIndex, year, dayIdx, group.step || 1, true);
+  } else {
+    const currentlyMarked = isDayMarked(group.years[year], dayIdx);
+    setMark(groupIndex, year, dayIdx, !currentlyMarked, true);
+  }
 }
 
-function createGroup(name: string, color?: number): number {
+function getMaxDayValue(groupIndex: number, year: number): number {
+  const g = state.groups[groupIndex];
+  if (!g || !g.years[year]) return 0;
+  const yearMarks = g.years[year];
+  let max = 0;
+  for (let d = 0; d < 366; d++) {
+    const val = getDayValue(yearMarks, d);
+    if (val > max) max = val;
+  }
+  return max;
+}
+
+function getGroupDayValue(
+  groupIndex: number,
+  year: number,
+  dayIdx: number,
+): number {
+  const g = state.groups[groupIndex];
+  if (!g || !g.years[year]) return 0;
+  return getDayValue(g.years[year], dayIdx);
+}
+
+function createGroup(
+  name: string,
+  color?: number,
+  variant: GroupVariant = "boolean",
+  step = 1,
+): number {
   const id = state.nextGroupId++;
   const assignedColor = color ?? (id - 1) % 12;
   const newGroup: Group = {
     id,
     name: name.trim() || `Group ${id}`,
     color: assignedColor,
+    variant,
+    step: Math.max(1, step),
     years: {},
   };
   const nextGroups = [...state.groups, newGroup];
@@ -668,15 +818,33 @@ function createGroup(name: string, color?: number): number {
 
 function updateGroup(
   id: number,
-  patch: { name?: string; color?: number },
+  patch: {
+    name?: string;
+    color?: number;
+    variant?: GroupVariant;
+    step?: number;
+  },
 ): void {
   const nextGroups = state.groups.map((g) => {
     if (g.id !== id) return g;
-    return {
-      ...g,
-      name: patch.name !== undefined ? patch.name.trim() || g.name : g.name,
-      color: patch.color !== undefined ? patch.color : g.color,
-    };
+    let updated = { ...g };
+    if (patch.name !== undefined) {
+      updated.name = patch.name.trim() || updated.name;
+    }
+    if (patch.color !== undefined) {
+      updated.color = patch.color;
+    }
+    if (patch.step !== undefined) {
+      updated.step = Math.max(1, Math.floor(patch.step));
+    }
+    if (patch.variant !== undefined && patch.variant !== updated.variant) {
+      if (patch.variant === "frequency") {
+        updated = convertGroupToFrequency(updated, updated.step || 1);
+      } else {
+        updated = convertGroupToBoolean(updated);
+      }
+    }
+    return updated;
   });
   updateState({ ...state, groups: nextGroups }, { pushHash: true });
 }
@@ -802,7 +970,7 @@ function createTaskGroup(name: string, color?: number): number {
   const group: TaskGroup = {
     id,
     name: trimmed || `Group ${id}`,
-    color: color !== undefined ? color : (id % PALETTE.length),
+    color: color !== undefined ? color : id % PALETTE.length,
   };
   taskGroups = [...taskGroups, group];
   scheduleSaveTaskGroups();
@@ -1008,7 +1176,11 @@ export function useStore(): StoreView {
       const g = state.groups[groupIndex];
       return isDayMarked(g?.years[y], idx);
     },
+    getDayValue: getGroupDayValue,
+    getMaxDayValue,
     toggle: toggleMark,
+    incrementMark,
+    resetMark,
     setMark,
     commitMarks,
     settings,

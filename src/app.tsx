@@ -161,6 +161,15 @@ export function App() {
             isMarked={(idx) =>
               showAll ? isAnyMarked(ui.year, idx) : isMarked(ui.year, idx)
             }
+            groupVariant={showAll ? "boolean" : group?.variant}
+            getDayValue={(idx) =>
+              showAll
+                ? isAnyMarked(ui.year, idx)
+                  ? 1
+                  : 0
+                : ui.getDayValue(ui.sel, ui.year, idx)
+            }
+            maxVal={showAll ? 1 : ui.getMaxDayValue(ui.sel, ui.year)}
             selectedDate={selectedDate}
             onSelectDate={(y, m, d) => setSelectedDate({ y, m, d })}
             onSelectMonth={ui.setMonth}
@@ -182,6 +191,17 @@ export function App() {
           isMarked={(y, idx) =>
             showAll ? isAnyMarked(y, idx) : isMarked(y, idx)
           }
+          groupVariant={showAll ? "boolean" : group?.variant}
+          getDayValue={(y, idx) =>
+            showAll
+              ? isAnyMarked(y, idx)
+                ? 1
+                : 0
+              : ui.getDayValue(ui.sel, y, idx)
+          }
+          maxVal={showAll ? 1 : ui.getMaxDayValue(ui.sel, ui.year)}
+          onIncrement={(y, idx) => ui.incrementMark(ui.sel, y, idx)}
+          onResetMark={(y, idx) => ui.resetMark(ui.sel, y, idx)}
           selectedDate={selectedDate}
           onSelectDate={(y, m, d) => setSelectedDate({ y, m, d })}
           onPrevMonth={ui.prevMonth}
@@ -226,7 +246,9 @@ export function App() {
         groups={ui.groups}
         activeId={group ? group.id : null}
         onClose={() => ui.setSheet(null)}
-        onCreate={(name, color) => ui.createGroup(name, color)}
+        onCreate={(name, color, variant, step) =>
+          ui.createGroup(name, color, variant, step)
+        }
         onUpdate={ui.updateGroup}
         onDelete={ui.deleteGroup}
         onReorder={ui.reorderGroup}

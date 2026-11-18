@@ -230,7 +230,11 @@ export function TaskSheet(props: {
       <div class="ovl" onClick={props.onClose} />
       <div class="sheet" role="dialog" aria-modal="true" aria-label="Tasks">
         <div class="sh-head">
-          <b>{managingGroups ? "Manage Task Groups" : `Tasks (${activeTasks.length})`}</b>
+          <b>
+            {managingGroups
+              ? "Manage Task Groups"
+              : `Tasks (${activeTasks.length})`}
+          </b>
           <button
             type="button"
             class="icon-btn"
@@ -316,9 +320,7 @@ export function TaskSheet(props: {
                           style={{ background: PALETTE[g.color] }}
                           title="Change color"
                           onClick={() =>
-                            setEditingColorGroupId(
-                              isColorPicking ? null : g.id,
-                            )
+                            setEditingColorGroupId(isColorPicking ? null : g.id)
                           }
                         />
                         <input

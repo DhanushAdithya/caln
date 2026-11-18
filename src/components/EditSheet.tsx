@@ -1,14 +1,27 @@
 import { useState } from "preact/hooks";
 import { PALETTE } from "../state/palette";
-import type { Group } from "../state/hash";
+import type { Group, GroupVariant } from "../state/hash";
 
 export function EditSheet(props: {
   open: boolean;
   groups: Group[];
   activeId: number | null;
   onClose: () => void;
-  onCreate: (name: string, color: number) => void;
-  onUpdate: (id: number, patch: { name?: string; color?: number }) => void;
+  onCreate: (
+    name: string,
+    color: number,
+    variant?: GroupVariant,
+    step?: number,
+  ) => void;
+  onUpdate: (
+    id: number,
+    patch: {
+      name?: string;
+      color?: number;
+      variant?: GroupVariant;
+      step?: number;
+    },
+  ) => void;
   onDelete: (id: number) => void;
   onReorder: (from: number, to: number) => void;
 }) {
@@ -16,6 +29,8 @@ export function EditSheet(props: {
 
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(0);
+  const [newVariant, setNewVariant] = useState<GroupVariant>("boolean");
+  const [newStep, setNewStep] = useState(1);
   const [editingColorGroupId, setEditingColorGroupId] = useState<number | null>(
     null,
   );
@@ -24,9 +39,11 @@ export function EditSheet(props: {
     e?.preventDefault();
     const trimmed = newName.trim();
     if (!trimmed) return;
-    props.onCreate(trimmed, newColor);
+    props.onCreate(trimmed, newColor, newVariant, newStep);
     setNewName("");
     setNewColor((newColor + 1) % PALETTE.length);
+    setNewVariant("boolean");
+    setNewStep(1);
   };
 
   return (
@@ -98,6 +115,49 @@ export function EditSheet(props: {
                 />
               ))}
             </div>
+            <div class="sh-new-options">
+              <div
+                class="sh-variant-toggle"
+                role="group"
+                aria-label="New group variant"
+              >
+                <button
+                  type="button"
+                  class={`sh-var-btn${newVariant === "boolean" ? " active" : ""}`}
+                  onClick={() => setNewVariant("boolean")}
+                >
+                  Boolean
+                </button>
+                <button
+                  type="button"
+                  class={`sh-var-btn${newVariant === "frequency" ? " active" : ""}`}
+                  onClick={() => setNewVariant("frequency")}
+                >
+                  Frequency
+                </button>
+              </div>
+              {newVariant === "frequency" && (
+                <div class="sh-step-control">
+                  <span class="sh-step-tag">Step</span>
+                  <input
+                    type="number"
+                    class="sh-step-num"
+                    min="1"
+                    max="999"
+                    value={newStep}
+                    onInput={(e) =>
+                      setNewStep(
+                        Math.max(
+                          1,
+                          parseInt((e.target as HTMLInputElement).value, 10) ||
+                            1,
+                        ),
+                      )
+                    }
+                  />
+                </div>
+              )}
+            </div>
           </form>
 
           <div class="sh-groups-list">
@@ -106,6 +166,7 @@ export function EditSheet(props: {
             ) : (
               props.groups.map((g, idx) => {
                 const isColorPicking = editingColorGroupId === g.id;
+                const isFreq = g.variant === "frequency";
                 return (
                   <div key={g.id} class="sh-group-card">
                     <div class="sh-group-row">
@@ -169,6 +230,60 @@ export function EditSheet(props: {
                         </button>
                       </div>
                     </div>
+
+                    <div class="sh-group-subrow">
+                      <div
+                        class="sh-variant-toggle"
+                        role="group"
+                        aria-label="Group variant"
+                      >
+                        <button
+                          type="button"
+                          class={`sh-var-btn${!isFreq ? " active" : ""}`}
+                          onClick={() =>
+                            props.onUpdate(g.id, { variant: "boolean" })
+                          }
+                        >
+                          Boolean
+                        </button>
+                        <button
+                          type="button"
+                          class={`sh-var-btn${isFreq ? " active" : ""}`}
+                          onClick={() =>
+                            props.onUpdate(g.id, {
+                              variant: "frequency",
+                              step: g.step || 1,
+                            })
+                          }
+                        >
+                          Frequency
+                        </button>
+                      </div>
+                      {isFreq && (
+                        <div class="sh-step-control">
+                          <span class="sh-step-tag">Step</span>
+                          <input
+                            type="number"
+                            class="sh-step-num"
+                            min="1"
+                            max="999"
+                            value={g.step || 1}
+                            onInput={(e) =>
+                              props.onUpdate(g.id, {
+                                step: Math.max(
+                                  1,
+                                  parseInt(
+                                    (e.target as HTMLInputElement).value,
+                                    10,
+                                  ) || 1,
+                                ),
+                              })
+                            }
+                          />
+                        </div>
+                      )}
+                    </div>
+
                     {isColorPicking && (
                       <div class="palette-swatches compact">
                         {PALETTE.map((hex, colorIdx) => (

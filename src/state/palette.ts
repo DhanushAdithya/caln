@@ -23,3 +23,15 @@ export function onColor(hex: string): string {
     255;
   return lum > 0.62 ? "#15161a" : "#ffffff";
 }
+
+export function getHeatColor(hex: string, level: number): string {
+  if (level <= 0) return "var(--cell)";
+  if (level >= 4) return hex;
+  const pct = level === 1 ? 30 : level === 2 ? 55 : 80;
+  return `color-mix(in srgb, ${hex} ${pct}%, var(--cell))`;
+}
+
+export function getHeatTextColor(hex: string, level: number): string {
+  if (level <= 2) return "var(--text)";
+  return onColor(hex);
+}
