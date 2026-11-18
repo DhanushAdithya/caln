@@ -187,14 +187,28 @@ let idbTimer: number | null = null;
 let lastWrittenHash = "";
 let isSharedTemp = false;
 
+function removeHash(): void {
+  if (typeof window === "undefined") return;
+  lastWrittenHash = "";
+  if (window.location.hash) {
+    try {
+      const cleanUrl = window.location.pathname + window.location.search;
+      window.history.replaceState(null, "", cleanUrl);
+    } catch {}
+  }
+}
+
 function scheduleIdbSave(targetState: State): void {
   if (typeof window === "undefined" || isSharedTemp) return;
   if (idbTimer !== null) {
     window.clearTimeout(idbTimer);
   }
-  idbTimer = window.setTimeout(() => {
+  idbTimer = window.setTimeout(async () => {
     idbTimer = null;
-    idbSet("state", targetState);
+    const ok = await idbSet("state", targetState);
+    if (ok) {
+      removeHash();
+    }
   }, 500);
 }
 
@@ -207,8 +221,12 @@ async function saveSharedToLocal(): Promise<void> {
       window.clearTimeout(idbTimer);
       idbTimer = null;
     }
-    await idbSet("state", state);
+    const ok = await idbSet("state", state);
+    if (ok) {
+      removeHash();
+    }
     showToast("Saved to local state");
+    notify();
     return;
   }
 
@@ -256,8 +274,10 @@ async function saveSharedToLocal(): Promise<void> {
     window.clearTimeout(idbTimer);
     idbTimer = null;
   }
-  await idbSet("state", mergedState);
-  await writeHash(mergedState, true);
+  const ok = await idbSet("state", mergedState);
+  if (ok) {
+    removeHash();
+  }
   notify();
 
   const count = newGroups.length;
@@ -270,16 +290,11 @@ async function discardShared(): Promise<void> {
   const savedState = await idbGet<State>("state");
   if (savedState) {
     state = savedState;
-    const h = await encodeHash(savedState);
-    lastWrittenHash = h;
-    window.history.replaceState(null, "", h);
   } else {
     state = createDefaultState();
-    const h = await encodeHash(state);
-    lastWrittenHash = h;
-    window.history.replaceState(null, "", h);
-    idbSet("state", state);
+    await idbSet("state", state);
   }
+  removeHash();
   currentToast = null;
   notify();
   showToast("Returned to your local calendar");
@@ -381,29 +396,24 @@ export function initStore(): Promise<void> {
       if (decoded) {
         if (!savedState || !areStatesEqual(decoded, savedState)) {
           isShared = true;
+        } else {
+          removeHash();
         }
         loadedState = decoded;
       } else {
         showToast("This link can't be read");
+        removeHash();
       }
     }
 
     if (!loadedState) {
       if (savedState) {
         loadedState = savedState;
-        if (typeof window !== "undefined") {
-          const h = await encodeHash(loadedState);
-          lastWrittenHash = h;
-          window.history.replaceState(null, "", h);
-        }
+        removeHash();
       } else {
         loadedState = createDefaultState();
-        if (typeof window !== "undefined") {
-          const h = await encodeHash(loadedState);
-          lastWrittenHash = h;
-          window.history.replaceState(null, "", h);
-          idbSet("state", loadedState);
-        }
+        removeHash();
+        idbSet("state", loadedState);
       }
     }
 
@@ -470,12 +480,15 @@ async function installApp(): Promise<void> {
 
 async function shareLink(): Promise<void> {
   if (typeof window === "undefined") return;
-  const url = window.location.href;
+  const hash = await encodeHash(state);
+  const urlObj = new URL(window.location.href);
+  urlObj.hash = hash;
+  const shareUrl = urlObj.toString();
   if (navigator.share) {
     try {
       await navigator.share({
         title: "caln",
-        url,
+        url: shareUrl,
       });
       return;
     } catch (err) {
@@ -485,7 +498,7 @@ async function shareLink(): Promise<void> {
     }
   }
   try {
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(shareUrl);
     showToast("Link copied to clipboard");
   } catch {
     showToast("Failed to copy link");
@@ -610,6 +623,7 @@ function commitMarks(): void {
   encodeHash(state).then((h) => {
     lastWrittenHash = h;
     window.history.pushState(null, "", h);
+    scheduleIdbSave(state);
   });
 }
 
@@ -933,15 +947,7 @@ async function deleteAllData(): Promise<void> {
     localStorage.removeItem("caln_locked");
   } catch {}
 
-  if (typeof window !== "undefined" && window.location.hash) {
-    try {
-      history.replaceState(
-        null,
-        "",
-        window.location.pathname + window.location.search,
-      );
-    } catch {}
-  }
+  removeHash();
 
   state = createDefaultState();
   settings = { ...DEFAULT_SETTINGS };
