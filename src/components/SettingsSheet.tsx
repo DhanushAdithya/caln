@@ -308,6 +308,24 @@ export function SettingsSheet(props: {
             />
           </div>
 
+          <div class="sh-row">
+            <span>Mechanical click sound</span>
+            <Switch
+              checked={s.sound}
+              label="Mechanical click sound"
+              onToggle={() => props.onSet("sound", !s.sound)}
+            />
+          </div>
+
+          <div class="sh-row">
+            <span>Haptic vibration</span>
+            <Switch
+              checked={s.haptics}
+              label="Haptic vibration"
+              onToggle={() => props.onSet("haptics", !s.haptics)}
+            />
+          </div>
+
           {props.isSharedTemp && (
             <div class="sh-row">
               <span>Shared calendar (temp)</span>

@@ -18,6 +18,7 @@ import {
 import { idbClear, idbGet, idbSet } from "./db";
 import { todayRef } from "./dates";
 import { PALETTE } from "./palette";
+import { triggerFeedback } from "../ui/feedback";
 
 export type Sheet = null | "settings" | "groups" | "stats" | "notes" | "tasks";
 
@@ -598,6 +599,8 @@ function setMark(
   const currentlyMarked = isDayMarked(currentYearMarks, dayIdx);
   if (currentlyMarked === value) return;
 
+  triggerFeedback(settings, value ? "on" : "off");
+
   const nextMarks = currentYearMarks
     ? new Uint8Array(currentYearMarks)
     : new Uint8Array(46);
@@ -866,7 +869,15 @@ function addTask(text: string, groupId?: number): void {
 }
 
 function toggleTask(id: string): void {
-  tasks = tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t));
+  let nextDone = false;
+  tasks = tasks.map((t) => {
+    if (t.id === id) {
+      nextDone = !t.done;
+      return { ...t, done: nextDone };
+    }
+    return t;
+  });
+  triggerFeedback(settings, nextDone ? "on" : "off");
   scheduleSaveTasks();
   notify();
 }

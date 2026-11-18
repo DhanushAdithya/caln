@@ -10,6 +10,8 @@ export interface Settings {
   weekendsRed: boolean;
   locked: boolean;
   hideMatrix: boolean;
+  sound: boolean;
+  haptics: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -20,6 +22,8 @@ export const DEFAULT_SETTINGS: Settings = {
   weekendsRed: true,
   locked: false,
   hideMatrix: false,
+  sound: true,
+  haptics: true,
 };
 
 export function normalizeSettings(
@@ -61,5 +65,13 @@ export function normalizeSettings(
       typeof raw.hideMatrix === "boolean"
         ? raw.hideMatrix
         : DEFAULT_SETTINGS.hideMatrix,
+    sound:
+      typeof raw.sound === "boolean"
+        ? raw.sound
+        : DEFAULT_SETTINGS.sound,
+    haptics:
+      typeof raw.haptics === "boolean"
+        ? raw.haptics
+        : DEFAULT_SETTINGS.haptics,
   };
 }
