@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "preact/hooks";
 import type { Settings, ThemeName } from "../state/settings";
 import type { Group } from "../state/hash";
-import type { TaskItem } from "../state/store";
+import type { TaskItem, TaskGroup } from "../state/store";
 
 function formatBytes(bytes: number): string {
   if (bytes <= 0) return "0 B";
@@ -88,6 +88,7 @@ export function SettingsSheet(props: {
   settings: Settings;
   notes: Record<string, string>;
   tasks: TaskItem[];
+  taskGroups: TaskGroup[];
   groups: Group[];
   onSet: <K extends keyof Settings>(k: K, v: Settings[K]) => void;
   onClose: () => void;
@@ -153,9 +154,15 @@ export function SettingsSheet(props: {
     const notesBytes = hasNotes
       ? new Blob([JSON.stringify(props.notes)]).size
       : 0;
-    const hasTasks = (props.tasks || []).length > 0;
+    const hasTasks =
+      (props.tasks || []).length > 0 || (props.taskGroups || []).length > 0;
     const tasksBytes = hasTasks
-      ? new Blob([JSON.stringify(props.tasks)]).size
+      ? new Blob([
+          JSON.stringify({
+            tasks: props.tasks,
+            groups: props.taskGroups,
+          }),
+        ]).size
       : 0;
     const entriesBytes = new Blob([JSON.stringify(props.groups || [])]).size;
     const settingsBytes = new Blob([JSON.stringify(props.settings || {})]).size;

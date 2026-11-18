@@ -17,14 +17,22 @@ import {
 } from "./settings";
 import { idbClear, idbGet, idbSet } from "./db";
 import { todayRef } from "./dates";
+import { PALETTE } from "./palette";
 
 export type Sheet = null | "settings" | "groups" | "stats" | "notes" | "tasks";
+
+export interface TaskGroup {
+  id: number;
+  name: string;
+  color: number;
+}
 
 export interface TaskItem {
   id: string;
   text: string;
   done: boolean;
   createdAt: number;
+  groupId: number;
 }
 
 export interface ToastData {
@@ -63,10 +71,14 @@ export interface StoreView {
   setNote: (dateKey: string, text: string) => void;
   deleteNote: (dateKey: string) => void;
   tasks: TaskItem[];
-  addTask: (text: string) => void;
+  taskGroups: TaskGroup[];
+  addTask: (text: string, groupId?: number) => void;
   toggleTask: (id: string) => void;
-  updateTask: (id: string, text: string) => void;
+  updateTask: (id: string, text: string, groupId?: number) => void;
   deleteTask: (id: string) => void;
+  createTaskGroup: (name: string, color?: number) => number;
+  updateTaskGroup: (id: number, patch: { name?: string; color?: number }) => void;
+  deleteTaskGroup: (id: number) => void;
   jumpToday: () => void;
   createGroup: (name: string, color?: number) => number;
   updateGroup: (id: number, patch: { name?: string; color?: number }) => void;
@@ -114,6 +126,9 @@ let notes: Record<string, string> = {};
 let notesTimer: number | null = null;
 let tasks: TaskItem[] = [];
 let tasksTimer: number | null = null;
+let taskGroups: TaskGroup[] = [{ id: 1, name: "Tasklist", color: 5 }];
+let nextTaskGroupId = 2;
+let taskGroupsTimer: number | null = null;
 let currentSheet: Sheet = null;
 let currentToast: ToastData | null = null;
 let toastTimer: number | null = null;
@@ -336,9 +351,25 @@ export function initStore(): Promise<void> {
       notes = savedNotes;
     }
 
+    const savedTaskGroups = await idbGet<TaskGroup[]>("task_groups");
+    if (
+      savedTaskGroups &&
+      Array.isArray(savedTaskGroups) &&
+      savedTaskGroups.length > 0
+    ) {
+      taskGroups = savedTaskGroups;
+    } else {
+      taskGroups = [{ id: 1, name: "Tasklist", color: 5 }];
+    }
+    nextTaskGroupId = Math.max(1, ...taskGroups.map((g) => g.id)) + 1;
+
     const savedTasks = await idbGet<TaskItem[]>("tasks");
     if (savedTasks && Array.isArray(savedTasks)) {
-      tasks = savedTasks;
+      const defaultGid = taskGroups[0].id;
+      tasks = savedTasks.map((t) => ({
+        ...t,
+        groupId: t.groupId ?? defaultGid,
+      }));
     }
 
     const savedState = await idbGet<State>("state");
@@ -738,6 +769,62 @@ function deleteNote(dateKey: string): void {
   }
 }
 
+function scheduleSaveTaskGroups(): void {
+  if (taskGroupsTimer !== null) {
+    window.clearTimeout(taskGroupsTimer);
+  }
+  taskGroupsTimer = window.setTimeout(() => {
+    taskGroupsTimer = null;
+    idbSet("task_groups", taskGroups);
+  }, 400);
+}
+
+function createTaskGroup(name: string, color?: number): number {
+  const trimmed = name.trim();
+  const id = nextTaskGroupId++;
+  const group: TaskGroup = {
+    id,
+    name: trimmed || `Group ${id}`,
+    color: color !== undefined ? color : (id % PALETTE.length),
+  };
+  taskGroups = [...taskGroups, group];
+  scheduleSaveTaskGroups();
+  notify();
+  return id;
+}
+
+function updateTaskGroup(
+  id: number,
+  patch: { name?: string; color?: number },
+): void {
+  taskGroups = taskGroups.map((g) => {
+    if (g.id !== id) return g;
+    return {
+      ...g,
+      name: patch.name !== undefined ? patch.name.trim() || g.name : g.name,
+      color: patch.color !== undefined ? patch.color : g.color,
+    };
+  });
+  scheduleSaveTaskGroups();
+  notify();
+}
+
+function deleteTaskGroup(id: number): void {
+  if (taskGroups.length <= 1) {
+    showToast("At least one group is required");
+    return;
+  }
+  const remaining = taskGroups.filter((g) => g.id !== id);
+  const fallbackGroupId = remaining[0].id;
+  taskGroups = remaining;
+  tasks = tasks.map((t) =>
+    t.groupId === id ? { ...t, groupId: fallbackGroupId } : t,
+  );
+  scheduleSaveTaskGroups();
+  scheduleSaveTasks();
+  notify();
+}
+
 function scheduleSaveTasks(): void {
   if (tasksTimer !== null) {
     window.clearTimeout(tasksTimer);
@@ -748,14 +835,16 @@ function scheduleSaveTasks(): void {
   }, 400);
 }
 
-function addTask(text: string): void {
+function addTask(text: string, groupId?: number): void {
   const trimmed = text.trim();
   if (!trimmed) return;
+  const targetGroupId = groupId ?? taskGroups[0]?.id ?? 1;
   const item: TaskItem = {
     id: `t_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     text: trimmed,
     done: false,
     createdAt: Date.now(),
+    groupId: targetGroupId,
   };
   tasks = [item, ...tasks];
   scheduleSaveTasks();
@@ -768,10 +857,17 @@ function toggleTask(id: string): void {
   notify();
 }
 
-function updateTask(id: string, text: string): void {
+function updateTask(id: string, text: string, groupId?: number): void {
   const trimmed = text.trim();
   if (!trimmed) return;
-  tasks = tasks.map((t) => (t.id === id ? { ...t, text: trimmed } : t));
+  tasks = tasks.map((t) => {
+    if (t.id !== id) return t;
+    return {
+      ...t,
+      text: trimmed,
+      groupId: groupId !== undefined ? groupId : t.groupId,
+    };
+  });
   scheduleSaveTasks();
   notify();
 }
@@ -805,6 +901,11 @@ if (typeof window !== "undefined") {
       tasksTimer = null;
       idbSet("tasks", tasks);
     }
+    if (taskGroupsTimer !== null) {
+      window.clearTimeout(taskGroupsTimer);
+      taskGroupsTimer = null;
+      idbSet("task_groups", taskGroups);
+    }
   });
 }
 
@@ -820,6 +921,10 @@ async function deleteAllData(): Promise<void> {
   if (tasksTimer !== null) {
     window.clearTimeout(tasksTimer);
     tasksTimer = null;
+  }
+  if (taskGroupsTimer !== null) {
+    window.clearTimeout(taskGroupsTimer);
+    taskGroupsTimer = null;
   }
 
   await idbClear();
@@ -842,6 +947,8 @@ async function deleteAllData(): Promise<void> {
   settings = { ...DEFAULT_SETTINGS };
   notes = {};
   tasks = [];
+  taskGroups = [{ id: 1, name: "Tasklist", color: 5 }];
+  nextTaskGroupId = 2;
   applyTheme(settings.theme);
   currentSheet = null;
 
@@ -849,6 +956,7 @@ async function deleteAllData(): Promise<void> {
   await idbSet("settings", settings);
   await idbSet("notes", notes);
   await idbSet("tasks", tasks);
+  await idbSet("task_groups", taskGroups);
 
   notify();
   showToast("All data deleted");
@@ -894,10 +1002,14 @@ export function useStore(): StoreView {
     setNote,
     deleteNote,
     tasks,
+    taskGroups,
     addTask,
     toggleTask,
     updateTask,
     deleteTask,
+    createTaskGroup,
+    updateTaskGroup,
+    deleteTaskGroup,
     jumpToday,
     createGroup,
     updateGroup,

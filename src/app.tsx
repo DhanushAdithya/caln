@@ -209,6 +209,7 @@ export function App() {
         settings={ui.settings}
         notes={ui.notes}
         tasks={ui.tasks}
+        taskGroups={ui.taskGroups}
         groups={ui.groups}
         onSet={ui.setSetting}
         onClose={() => ui.setSheet(null)}
@@ -260,11 +261,15 @@ export function App() {
       <TaskSheet
         open={ui.sheet === "tasks"}
         tasks={ui.tasks}
+        taskGroups={ui.taskGroups}
         onClose={() => ui.setSheet(null)}
         onAddTask={ui.addTask}
         onToggleTask={ui.toggleTask}
         onUpdateTask={ui.updateTask}
         onDeleteTask={ui.deleteTask}
+        onCreateTaskGroup={ui.createTaskGroup}
+        onUpdateTaskGroup={ui.updateTaskGroup}
+        onDeleteTaskGroup={ui.deleteTaskGroup}
       />
 
       <Toast toast={ui.toast} onDismiss={ui.dismissToast} />
