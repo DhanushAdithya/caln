@@ -15,7 +15,7 @@ export function triggerHaptic(): void {
 export function playClick(variant: "on" | "off" = "on"): void {
   if (typeof window === "undefined") return;
   const now = performance.now();
-  if (now - lastSoundTime < 25) return;
+  if (now - lastSoundTime < 35) return;
   lastSoundTime = now;
 
   try {
@@ -33,24 +33,41 @@ export function playClick(variant: "on" | "off" = "on"): void {
     }
 
     const t = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
 
-    const startFreq = variant === "on" ? 1300 : 950;
-    const endFreq = variant === "on" ? 180 : 140;
+    const oscClick = audioCtx.createOscillator();
+    const gainClick = audioCtx.createGain();
 
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(startFreq, t);
-    osc.frequency.exponentialRampToValueAtTime(endFreq, t + 0.009);
+    oscClick.type = "triangle";
+    const clickStartFreq = variant === "on" ? 2200 : 1600;
+    const clickEndFreq = variant === "on" ? 520 : 380;
+    oscClick.frequency.setValueAtTime(clickStartFreq, t);
+    oscClick.frequency.exponentialRampToValueAtTime(clickEndFreq, t + 0.016);
 
-    gain.gain.setValueAtTime(0.07, t);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.011);
+    gainClick.gain.setValueAtTime(0.28, t);
+    gainClick.gain.exponentialRampToValueAtTime(0.001, t + 0.022);
 
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
+    oscClick.connect(gainClick);
+    gainClick.connect(audioCtx.destination);
+    oscClick.start(t);
+    oscClick.stop(t + 0.025);
 
-    osc.start(t);
-    osc.stop(t + 0.014);
+    // Body resonance (mechanical switch bottom-out thump)
+    const oscBody = audioCtx.createOscillator();
+    const gainBody = audioCtx.createGain();
+
+    oscBody.type = "sine";
+    const bodyStartFreq = variant === "on" ? 360 : 280;
+    const bodyEndFreq = variant === "on" ? 140 : 110;
+    oscBody.frequency.setValueAtTime(bodyStartFreq, t);
+    oscBody.frequency.exponentialRampToValueAtTime(bodyEndFreq, t + 0.028);
+
+    gainBody.gain.setValueAtTime(0.22, t);
+    gainBody.gain.exponentialRampToValueAtTime(0.001, t + 0.032);
+
+    oscBody.connect(gainBody);
+    gainBody.connect(audioCtx.destination);
+    oscBody.start(t);
+    oscBody.stop(t + 0.035);
   } catch {}
 }
 
